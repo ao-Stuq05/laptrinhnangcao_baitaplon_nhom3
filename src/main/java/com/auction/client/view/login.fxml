@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="424.0" prefWidth="823.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <VBox alignment="CENTER" spacing="25.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <children>
+            <VBox alignment="CENTER" prefHeight="85.0" prefWidth="823.0" spacing="9.0">
+               <children>
+                  <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="40.0" maxWidth="900.0" text="Chào Mừng Đến Với ">
+                     <font>
+                        <Font name="System Italic" size="16.0" />
+                     </font></Label>
+                  <Label alignment="CENTER" maxHeight="40.0" maxWidth="900.0" text="HỆ THỐNG ĐẤU GIÁ" textFill="#d12f2f">
+                     <font>
+                        <Font name="System Bold" size="25.0" />
+                     </font></Label>
+                  <ImageView fitHeight="76.0" fitWidth="143.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@../anh/logo.PNG" />
+                     </image>
+                  </ImageView>
+               </children>
+            </VBox>
+            <VBox alignment="CENTER" prefHeight="85.0" prefWidth="0.0" spacing="9.0">
+               <children>
+                  <Label prefHeight="40.0" prefWidth="400.0" text="Tài Khoản" textFill="#a95353" />
+                  <TextField alignment="CENTER" maxWidth="400.0" prefHeight="45.0" promptText="Fill Your Account" />
+               </children>
+            </VBox>
+            <VBox alignment="CENTER" prefHeight="85.0" prefWidth="0.0" spacing="9.0">
+               <children>
+
+                  <Label prefHeight="40.0" prefWidth="400.0" text="Mật Khẩu" textFill="#a95353" />
+                  <PasswordField alignment="CENTER" maxWidth="400.0" prefHeight="45.0" promptText="Fill Your Password" />
+               </children>
+            </VBox>
+
+            <Button mnemonicParsing="false" prefHeight="45.0" prefWidth="200.0" text="Login" textFill="#d93a3a">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font></Button>
+         </children>
+      </VBox>
+   </children>
+</AnchorPane>
