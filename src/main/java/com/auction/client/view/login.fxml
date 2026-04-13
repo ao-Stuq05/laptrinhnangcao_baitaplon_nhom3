@@ -5,46 +5,77 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="424.0" prefWidth="823.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="480.0" prefWidth="820.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
+
    <children>
-      <VBox alignment="CENTER" spacing="25.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+
+      <ImageView fitHeight="480.0" fitWidth="820.0" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <image>
+            <Image url="@../anh/Gemini_Generated_Image_xq6jqrxq6jqrxq6j.png" />
+         </image>
+      </ImageView>
+
+      <VBox alignment="CENTER" spacing="20.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
-            <VBox alignment="CENTER" prefHeight="85.0" prefWidth="823.0" spacing="9.0">
-               <children>
-                  <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="40.0" maxWidth="900.0" text="Chào Mừng Đến Với ">
-                     <font>
-                        <Font name="System Italic" size="16.0" />
-                     </font></Label>
-                  <Label alignment="CENTER" maxHeight="40.0" maxWidth="900.0" text="HỆ THỐNG ĐẤU GIÁ" textFill="#d12f2f">
-                     <font>
-                        <Font name="System Bold" size="25.0" />
-                     </font></Label>
-                  <ImageView fitHeight="76.0" fitWidth="143.0" pickOnBounds="true" preserveRatio="true">
-                     <image>
-                        <Image url="@../anh/logo.PNG" />
-                     </image>
-                  </ImageView>
-               </children>
-            </VBox>
-            <VBox alignment="CENTER" prefHeight="85.0" prefWidth="0.0" spacing="9.0">
-               <children>
-                  <Label prefHeight="40.0" prefWidth="400.0" text="Tài Khoản" textFill="#a95353" />
-                  <TextField alignment="CENTER" maxWidth="400.0" prefHeight="45.0" promptText="Fill Your Account" />
-               </children>
-            </VBox>
-            <VBox alignment="CENTER" prefHeight="85.0" prefWidth="0.0" spacing="9.0">
-               <children>
 
-                  <Label prefHeight="40.0" prefWidth="400.0" text="Mật Khẩu" textFill="#a95353" />
-                  <PasswordField alignment="CENTER" maxWidth="400.0" prefHeight="45.0" promptText="Fill Your Password" />
+            <VBox alignment="CENTER" spacing="6.0">
+               <children>
+                  <Label alignment="CENTER" maxWidth="900.0" text="Welcome To" textFill="#f8ff03">
+                     <font>
+                        <Font name="Bauhaus 93" size="24.0" />
+                     </font></Label>
+                  <Label alignment="CENTER" maxWidth="900.0" text="AUCTION SYSTEM" textFill="#ffdd00">
+                     <font>
+                        <Font name="Book Antiqua Bold" size="30.0" />
+                     </font></Label>
                </children>
             </VBox>
 
-            <Button mnemonicParsing="false" prefHeight="45.0" prefWidth="200.0" text="Login" textFill="#d93a3a">
-               <font>
-                  <Font name="System Bold" size="12.0" />
-               </font></Button>
+            <VBox alignment="CENTER" spacing="14.0" style="-fx-background-color: rgba(255,255,255,0.08);                          -fx-border-color: rgba(255,255,255,0.15);                          -fx-background-radius: 10;                          -fx-border-radius: 10;                          -fx-border-width: 1;                          -fx-padding: 28 40 28 40;">
+               <children>
+
+                  <VBox alignment="CENTER" spacing="5.0">
+                     <children>
+                        <Label prefHeight="18.0" prefWidth="336.0" text="Account" textFill="WHITE">
+                           <font>
+                              <Font name="Droid Sans" size="15.0" />
+                           </font></Label>
+                        <TextField alignment="TOP_LEFT" maxWidth="340.0" prefHeight="42.0" prefWidth="738.0" promptText="Fill Your Account">
+                           <font>
+                              <Font name="Corbel Italic" size="15.0" />
+                           </font></TextField>
+                     </children>
+                  </VBox>
+
+                  <VBox alignment="CENTER" spacing="5.0">
+                     <children>
+                        <Label prefHeight="18.0" prefWidth="339.0" text="PassWord" textFill="WHITE">
+                           <font>
+                              <Font name="Droid Sans" size="15.0" />
+                           </font></Label>
+                        <PasswordField alignment="TOP_LEFT" maxWidth="340.0" prefHeight="42.0" promptText="Fill Your Password">
+                           <font>
+                              <Font name="Corbel Italic" size="15.0" />
+                           </font></PasswordField>
+                     </children>
+                  </VBox>
+
+                  <Button mnemonicParsing="false" prefHeight="42.0" prefWidth="340.0" style="-fx-background-color: #0d3d6e;                                  -fx-text-fill: white;                                  -fx-font-weight: bold;                                  -fx-font-size: 14px;                                  -fx-border-color: rgba(255,255,255,0.25);                                  -fx-border-width: 1;                                  -fx-border-radius: 5;                                  -fx-background-radius: 5;                                  -fx-cursor: hand;" text="LOGIN">
+                     <font>
+                        <Font name="System Bold" size="14.0" />
+                     </font>
+                  </Button>
+
+                  <Button mnemonicParsing="false" prefHeight="31.0" prefWidth="208.0" style="-fx-background-color: transparent; -fx-font-style: italic;" text="Chưa có tài khoản ? Đăng kí" textFill="#f7e8e8">
+                     <font>
+                        <Font name="System Bold" size="15.0" />
+                     </font></Button>
+
+               </children>
+            </VBox>
+
          </children>
       </VBox>
+
    </children>
 </AnchorPane>
