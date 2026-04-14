@@ -1,4 +1,4 @@
-
+package com.auction.server.db;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -9,56 +9,43 @@ import java.sql.Statement;
  * Chỉ có 1 instance duy nhất trong toàn bộ ứng dụng.
  */
 public class DatabaseManager {
+    private static final String DB_URL = "jdbc:sqlite:data/auction.db";// Đường dẫn đến file SQLite (tự tạo nếu chưa tồn tại)
+    private static DatabaseManager instance;// Singleton instance
+    private Connection connection;  // Connection duy nhất đến SQLite
 
-    // Đường dẫn đến file database — tạo trong thư mục data/
-    private static final String DB_URL = "jdbc:sqlite:data/auction.db";
-
-    // Instance duy nhất — static để dùng chung toàn app
-    private static DatabaseManager instance;
-
-    // Connection duy nhất đến SQLite
-    private Connection connection;
-
-    // Constructor private — bên ngoài không thể new DatabaseManager()
+    // private constructor để ngăn tạo instance từ bên ngoài
     private DatabaseManager() {
         try {
-            // Tạo thư mục data/ nếu chưa có
-            new java.io.File("data").mkdirs();
-
-            // Mở kết nối đến file SQLite (tự tạo file nếu chưa tồn tại)
-            connection = DriverManager.getConnection(DB_URL);
-
-            // Bật foreign key support (SQLite tắt mặc định!)
-            connection.createStatement()
+            new java.io.File("data").mkdirs();// tao folder data nếu chưa tồn tại
+            connection = DriverManager.getConnection(DB_URL);// Kết nối đến SQLite database (tự tạo file nếu chưa tồn tại)
+            connection.createStatement()// bật foreign key support (SQLite mặc định tắt)
                       .execute("PRAGMA foreign_keys = ON");
-
             System.out.println("[DB] Kết nối SQLite thành công: " + DB_URL);
-
-            // Tạo tất cả bảng ngay khi khởi động
-            createTables();
-
+            createTables();// Tạo bảng nếu chưa tồn tại
         } catch (SQLException e) {
             throw new RuntimeException("Không thể kết nối database: " + e.getMessage(), e);
         }
     }
 
-    // Singleton getInstance() — thread-safe với synchronized
-    public static synchronized DatabaseManager getInstance() {
-        if (instance == null) {
-            instance = new DatabaseManager();
+    // Singleton getInstance() — thread-safe với synchronized( nếu như có 2 luồng vào cùng lúc không khởi tạo 2 instance)
+    public static DatabaseManager getInstance() {
+    if (instance == null) {
+        synchronized (DatabaseManager.class) {
+            if (instance == null) {
+                instance = new DatabaseManager();
+            }
         }
-        return instance;
     }
-
-    // Trả về Connection để DAO dùng
+    return instance;
+}
     public Connection getConnection() {
+        // Trả về Connection để DAO dùng
         return connection;
     }
 
     // Tạo tất cả bảng nếu chưa tồn tại
     private void createTables() throws SQLException {
         Statement stmt = connection.createStatement();
-
         // Bảng users
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -74,7 +61,6 @@ public class DatabaseManager {
                 updated_at    TEXT NOT NULL
             )
         """);
-
         // Bảng items
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS items (
@@ -89,7 +75,6 @@ public class DatabaseManager {
                 FOREIGN KEY (seller_id) REFERENCES users(id)
             )
         """);
-
         // Bảng auctions
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS auctions (
@@ -108,7 +93,6 @@ public class DatabaseManager {
                 FOREIGN KEY (winner_id)  REFERENCES users(id)
             )
         """);
-
         // Bảng bid_transactions
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS bid_transactions (
@@ -126,7 +110,6 @@ public class DatabaseManager {
         System.out.println("[DB] Tất cả bảng đã sẵn sàng.");
         stmt.close();
     }
-
     // Đóng kết nối khi server tắt
     public void close() {
         try {
