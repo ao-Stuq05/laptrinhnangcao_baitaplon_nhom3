@@ -10,17 +10,17 @@ public class BidTransaction extends Entity {
     // serialVersionUID bắt buộc khi implements Serializable
     // Nếu không có, Java tự tạo ngẫu nhiên → lỗi khi deserialize
     private static final long serialVersionUID = 1L;
-    private Bidder bidder;// bidder nao da dat gia
-    private double bidAmount;// gia tri cua bid
-    private LocalDateTime timestamp;// thoi diem dat gia
-    private boolean isWinning;// co phai nguoi dan dau khong                                        
-    private String auctionId;// id phien dau gia
+    private Bidder bidder;
+    private double bidAmount;
+    private LocalDateTime timestamp;
+    private boolean isWinning;                                    
+    private String auctionId;
     /**
      * Constructor chinh
      * timestamp tu dong gan khi tao bid moi, khong can truyen tu ngoai vao. Vi du: new BidTransaction(bidder, 1000, auctionId)             
      */
     public BidTransaction(Bidder bidder, double bidAmount, String auctionId) {
-        super(UUID.randomUUID().toString());
+        super(UUID.randomUUID().toString());// id nau
         // Validate đầu vào — không chờ DB mới phát hiện lỗi
         if (bidder == null) {
             throw new IllegalArgumentException("Bidder không được null");
@@ -35,8 +35,8 @@ public class BidTransaction extends Entity {
         this.bidder = bidder;
         this.bidAmount = bidAmount;
         this.auctionId = auctionId;
-        this.timestamp = LocalDateTime.now();  // Tự động ghi giờ hiện tại
-        this.isWinning = false;  // Ban đầu chưa biết có dẫn đầu không
+        this.timestamp = LocalDateTime.now();  
+        this.isWinning = false;
     }
 
     /**
@@ -53,11 +53,9 @@ public class BidTransaction extends Entity {
         this.isWinning = isWinning;
     }
 
-    // ── Implement abstract method từ Entity ──────────────────
 
     @Override
     public void printInfo() {
-        // Polymorphism — mỗi subclass của Entity tự in thông tin của mìn
         System.out.printf("[Bid] ID: %s | Bidder: %s | Giá: %.0f | Lúc: %s | Dẫn đầu: %s%n",
             getId(),
             bidder.getUsername(),
@@ -95,7 +93,7 @@ public class BidTransaction extends Entity {
         if (this == o) return true;
         if (!(o instanceof BidTransaction)) return false;
         BidTransaction other = (BidTransaction) o;
-        return getId().equals(other.getId());  // So sánh theo ID
+        return getId().equals(other.getId());  
     }
 
     @Override
