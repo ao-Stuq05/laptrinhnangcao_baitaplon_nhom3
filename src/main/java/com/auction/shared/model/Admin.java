@@ -1,3 +1,4 @@
+package com.auction.shared.model; 
 class Admin extends User {
 
     public Admin(String id, String username, String email, String passwordHash) {
