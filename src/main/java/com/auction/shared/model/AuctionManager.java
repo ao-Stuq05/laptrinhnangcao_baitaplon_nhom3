@@ -1,3 +1,5 @@
+package com.auction.shared.model;
+
 import java.util.ArrayList;
 import java.util.List;
 
