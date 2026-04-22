@@ -1,20 +1,42 @@
-package com.auction.shared.model;
+package com.auction.model.item;
 
+import com.auction.model.Entity;
+import com.auction.model.user.Seller;
+
+/**
+ * Abstract base class for auctionable items.
+ */
 public abstract class Item extends Entity {
+
     protected String name;
     protected String description;
     protected double basePrice;
+    protected Seller seller;
 
-    public Item(String id, String name, String description, double basePrice) {
-        super(id); // Gọi constructor của lớp cha Entity
+    protected Item(String name, String description, double basePrice, Seller seller) {
+        super();
         this.name = name;
         this.description = description;
         this.basePrice = basePrice;
+        this.seller = seller;
     }
 
-    // Phương thức trừu tượng, bắt buộc các lớp con phải tự định nghĩa
-    public abstract void displayItemDetails();
+    /** Returns the category label, e.g. "ELECTRONICS", "ART", "VEHICLE" */
+    public abstract String getCategory();
 
+    /** Returns the estimated shipping fee for this item type. */
+    public abstract double getShippingFee();
+
+    @Override
+    public void printInfo() {
+        System.out.printf("[%s] %s | basePrice=%.2f | seller=%s%n",
+                getCategory(), name, basePrice, seller.getUsername());
+    }
+
+    // Getters / Setters
     public String getName() { return name; }
+    public String getDescription() { return description; }
     public double getBasePrice() { return basePrice; }
+    public Seller getSeller() { return seller; }
+    public void setDescription(String description) { this.description = description; }
 }
