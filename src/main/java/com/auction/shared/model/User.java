@@ -1,30 +1,47 @@
 package com.auction.shared.model;
 
-import java.time.LocalDateTime;
-import java.util.Objects;
+import com.auction.model.Entity;
 
-abstract class Entity {
-    protected String id;
-    protected LocalDateTime createdAt;
-    protected LocalDateTime updatedAt;
+/**
+ * Abstract base class for all user types: Bidder, Seller, Admin.
+ */
+public abstract class User extends Entity {
 
-    public Entity(String id) {
-        this.id = id;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+    protected String username;
+    protected String email;
+    protected String passwordHash;
+    protected boolean isActive;
+
+    protected User(String username, String email, String passwordHash) {
+        super();
+        this.username = username;
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.isActive = true;
     }
 
-    public String getId() {
-        return id;
-    }
+    /** Returns the role label: "BIDDER", "SELLER", "ADMIN" */
+    public abstract String getRole();
 
-    public abstract void printInfo();
+    /**
+     * Simple login check — in production, use BCrypt.
+     * Returns true if the provided raw password matches the stored hash.
+     */
+    public boolean login(String rawPassword) {
+        // TODO: replace with BCrypt.checkpw(rawPassword, passwordHash)
+        return passwordHash.equals(rawPassword);
+    }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Entity)) return false;
-        Entity entity = (Entity) o;
-        return Objects.equals(id, entity.id);
+    public void printInfo() {
+        System.out.printf("[%s] username=%s | email=%s | active=%s%n",
+                getRole(), username, email, isActive);
     }
+
+    // Getters / Setters
+    public String getUsername() { return username; }
+    public String getEmail() { return email; }
+    public boolean isActive() { return isActive; }
+    public void setActive(boolean active) { isActive = active; }
+    public void setEmail(String email) { this.email = email; }
 }
