@@ -1,7 +1,7 @@
-package com.auction.shared.model.item;
+package com.auction.shared.model;
 
 import com.auction.shared.model.Entity;
-import com.auction.shared.model.user.Seller;
+import com.auction.shared.model.Seller;
 
 /**
  * Abstract base class for auctionable items.
@@ -13,7 +13,7 @@ public abstract class Item extends Entity {
     protected double basePrice;
     protected Seller seller;
 
-    protected Item(String name, String description, double basePrice, Seller seller) {
+    protected Item(String id, String name, String description, double basePrice, Seller seller) {
         super();
         this.name = name;
         this.description = description;
@@ -24,8 +24,7 @@ public abstract class Item extends Entity {
     /** Returns the category label, e.g. "ELECTRONICS", "ART", "VEHICLE" */
     public abstract String getCategory();
 
-    /** Returns the estimated shipping fee for this item type. */
-    public abstract double getShippingFee();
+
 
     @Override
     public void printInfo() {

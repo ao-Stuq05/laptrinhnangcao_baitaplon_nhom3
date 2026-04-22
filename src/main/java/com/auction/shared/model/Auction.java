@@ -10,10 +10,8 @@ public class Auction extends Entity {
     private double currentPrice;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-
-    // TODO: Chờ Thành viên A và C hoàn thành các class này thì mở comment
-    // private Bidder highestBidder;
-    // private List<BidTransaction> bidHistory;
+    private Bidder highestBidder;
+    private List<BidTransaction> bidHistory;
 
     // ------------------------------------------------------------------------
     // NHIỆM VỤ B: THÊM OBSERVER PATTERN (TRẠM PHÁT SÓNG)
@@ -39,24 +37,75 @@ public class Auction extends Entity {
             observer.onBidPlaced(transaction);
         }
     }
-    // ------------------------------------------------------------------------
-
-
+    // --- Constructor 1: Đầy đủ tham số (Dùng khi có sẵn ID) ---
     public Auction(String id, Item item, LocalDateTime startTime, LocalDateTime endTime) {
-        super(id);
-        this.item = item; // Giờ thì cả 2 bên đều là kiểu Item rồi, hết cãi nhau nhé!
-        this.status = AuctionStatus.OPEN;
-        this.currentPrice = item.getBasePrice();
+        super(id); // Gọi lên Entity
+        this.item = item;
         this.startTime = startTime;
         this.endTime = endTime;
+        this.currentPrice = item.getBasePrice();
+        this.status = AuctionStatus.OPEN;
     }
+
+    // --- Constructor 2: Rút gọn (Dùng cho lớp Seller gọi) ---
+    public Auction(Item item, LocalDateTime endTime) {
+        // Tự tạo ID duy nhất và gọi lại Constructor 1 bằng từ khóa this()
+        // Hoặc gọi trực tiếp super()
+        super("AUC-" + System.currentTimeMillis()); 
+        
+        this.item = item;
+        this.startTime = LocalDateTime.now(); // Tự động lấy giờ hiện tại
+        this.endTime = endTime;
+        this.currentPrice = item.getBasePrice();
+        this.status = AuctionStatus.OPEN;
+    }
+
+
+    
 
     public void startAuction() {
         this.status = AuctionStatus.RUNNING;
         System.out.println(">> Phiên đấu giá cho [" + item.getName() + "] đã CHÍNH THỨC BẮT ĐẦU!");
     }
+    public void cancel(){
+        if (this.status == AuctionStatus.OPEN || this.status == AuctionStatus.RUNNING) {
+            this.status = AuctionStatus.CANCELLED;
+            System.out.println(" Cuộc đấu giá " + getId() + " đã bị hủy.");
+        } 
+        else {
+        System.out.println("Lỗi: Không thể hủy cuộc đấu giá đã kết thúc hoặc đã hủy trước đó.");
+        }
+
+    };
+    public void placeBid(Bidder bidder, double amount){
+        // 1. Kiểm tra trạng thái đấu giá (chỉ cho phép nếu đang OPEN)
+        if (this.status != AuctionStatus.OPEN) {
+            System.out.println("Lỗi: Cuộc đấu giá hiện không mở!");
+            return;
+        }
+
+        // 2. Kiểm tra số tiền bid phải cao hơn giá hiện tại
+        if (amount <= this.currentPrice) {
+            System.out.println("Lỗi: Giá đấu phải cao hơn giá hiện tại (" + currentPrice + ")");
+            return;
+        }
+
+        // 3. Cập nhật giá hiện tại và lưu lịch sử (nếu cần)
+        this.currentPrice = amount;
+    
+        // Giả sử bạn muốn lưu vết ai là người đang giữ giá cao nhất
+        // this.highestBidder = bidder; 
+
+        System.out.println("Chúc mừng! " + bidder.getUsername() + " đã đặt giá " + amount);
+    }
+    public Auction(String id, Item item) {
+        this(id, item, LocalDateTime.now(), LocalDateTime.now().plusDays(1)); 
+        // Tự động lấy giờ hiện tại và kết thúc sau 1 ngày
+    }
 
     public Item getItem() { return item; }
     public AuctionStatus getStatus() { return status; }
     public double getCurrentPrice() { return currentPrice; }
+
 }
+

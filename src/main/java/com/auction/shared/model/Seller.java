@@ -1,9 +1,4 @@
 package com.auction.shared.model;
-
-import com.auction.shared.model.Item;
-import com.auction.shared.model.Auction;
-import com.auction.shared.model.AuctionManager;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,7 +10,8 @@ public class Seller extends User {
     private List<Item> listedItems;
     private double rating; // 0.0 – 5.0
 
-    public Seller(String username, String email, String passwordHash, String shopName) {
+    public Seller( String username, String email, String passwordHash, String shopName) {
+        // Cập nhật super để khớp với Class User (thường có thêm trường ID)
         super(username, email, passwordHash);
         this.shopName = shopName;
         this.listedItems = new ArrayList<>();
@@ -23,30 +19,40 @@ public class Seller extends User {
     }
 
     @Override
-    public String getRole() { return "SELLER"; }
+    public String getRole() { 
+        return "SELLER"; 
+    }
 
     public void listItem(Item item) {
-        listedItems.add(item);
+        if (item != null) {
+            listedItems.add(item);
+        }
     }
 
     /**
-     * Convenience: create and register an auction for an item.
+     * Tạo và đăng ký một cuộc đấu giá cho vật phẩm.
+     * Lưu ý: Hãy đảm bảo file Auction.java đã có constructor Auction(Item, LocalDateTime)
      */
     public Auction createAuction(Item item, LocalDateTime endTime) {
         listItem(item);
         Auction auction = new Auction(item, endTime);
+        // Đảm bảo AuctionManager đã được định nghĩa đúng theo Pattern Singleton
         AuctionManager.getInstance().registerAuction(auction);
         return auction;
     }
 
-    public List<Item> getListedItems() { return Collections.unmodifiableList(listedItems); }
+    public List<Item> getListedItems() { 
+        return Collections.unmodifiableList(listedItems); 
+    }
+
     public String getShopName() { return shopName; }
     public double getRating() { return rating; }
     public void setRating(double rating) { this.rating = rating; }
 
     @Override
     public void printInfo() {
-        super.printInfo();
+        // Gọi hàm in của lớp cha User
+        super.printInfo(); 
         System.out.printf("  shop=%s | rating=%.1f | items=%d%n",
                 shopName, rating, listedItems.size());
     }

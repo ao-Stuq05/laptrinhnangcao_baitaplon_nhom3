@@ -1,3 +1,4 @@
+package com.auction.shared.model;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -6,8 +7,8 @@ class Seller extends User {
   private List<Item> listedItems;
   private double rating;
 
-  public Seller(String id, String username, String email, String pw, String shopName) {
-    super(id, username, email, pw);
+  public Seller( String username, String email, String passwordHash, String shopName) {
+    super(username, email, passwordHash);
     this.shopName = shopName;
     this.listedItems = new ArrayList<>();
   }

@@ -7,10 +7,9 @@ class Bidder extends User {
     private double balance;
     private List<BidTransaction> bidHistory;
 
-    public Bidder(String id, String username, String email, String pw, double balance) {
-        super(id, username, email, pw);
+    public Bidder( String username, String email, String passwordHash, double balance ) {
+        super( username, email, passwordHash);
         this.balance = balance;
-        this.bidHistory = new ArrayList<>();
     }
 
     @Override

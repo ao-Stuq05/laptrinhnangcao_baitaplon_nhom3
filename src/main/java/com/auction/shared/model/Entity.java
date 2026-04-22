@@ -25,7 +25,9 @@ public abstract class Entity {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public abstract void printInfo();
+    public  void printInfo(){
+        
+    }
 
     public String getId() { return id; }
     public LocalDateTime getCreatedAt() { return createdAt; }

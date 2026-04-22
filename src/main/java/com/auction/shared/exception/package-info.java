@@ -1,1 +1,1 @@
-package main.java.com.auction.shared.exception;
+package com.auction.shared.exception;

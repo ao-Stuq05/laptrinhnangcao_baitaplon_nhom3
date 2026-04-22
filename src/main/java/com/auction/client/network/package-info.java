@@ -1,1 +1,1 @@
-package main.java.com.auction.client.network;
+package com.auction.client.network;
