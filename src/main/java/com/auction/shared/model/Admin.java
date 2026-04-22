@@ -1,7 +1,7 @@
 package com.auction.shared.model;
 
-import com.auction.model.Auction;
-import com.auction.model.AuctionStatus;
+import com.auction.shared.model.Auction;
+import com.auction.shared.model.AuctionStatus;
 
 public class Admin extends User {
 
