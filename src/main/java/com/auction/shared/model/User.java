@@ -1,6 +1,6 @@
 package com.auction.shared.model;
 
-import com.auction.model.Entity;
+import com.auction.shared.model.Entity;
 
 /**
  * Abstract base class for all user types: Bidder, Seller, Admin.
