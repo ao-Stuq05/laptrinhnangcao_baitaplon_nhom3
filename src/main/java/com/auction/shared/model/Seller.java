@@ -1,8 +1,8 @@
 package com.auction.shared.model;
 
-import com.auction.model.item.Item;
-import com.auction.model.Auction;
-import com.auction.pattern.AuctionManager;
+import com.auction.shared.model.Item;
+import com.auction.shared.model.Auction;
+import com.auction.shared.model.AuctionManager;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
