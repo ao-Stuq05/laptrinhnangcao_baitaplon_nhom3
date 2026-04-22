@@ -1,4 +1,4 @@
-package com.auction.model.user;
+package com.auction.shared.model.user;
 
 import com.auction.model.Entity;
 
