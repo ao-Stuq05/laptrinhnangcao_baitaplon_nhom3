@@ -1,7 +1,7 @@
-package com.auction.model.item;
+package com.auction.shared.model.item;
 
-import com.auction.model.Entity;
-import com.auction.model.user.Seller;
+import com.auction.shared.model.Entity;
+import com.auction.shared.model.user.Seller;
 
 /**
  * Abstract base class for auctionable items.
