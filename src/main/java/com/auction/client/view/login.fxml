@@ -6,7 +6,7 @@
 <?import javafx.scene.text.*?>
 
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="480.0" prefWidth="820.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
-
+   fx:controller="com.auction.client.controller.LoginController"> // thêm để controller điều khiển
    <children>
 
       <ImageView fitHeight="480.0" fitWidth="820.0" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
@@ -40,7 +40,8 @@
                            <font>
                               <Font name="Droid Sans" size="15.0" />
                            </font></Label>
-                        <TextField alignment="TOP_LEFT" maxWidth="340.0" prefHeight="42.0" prefWidth="738.0" promptText="Fill Your Account">
+                        <TextField
+                                alignment="TOP_LEFT" maxWidth="340.0" prefHeight="42.0" prefWidth="738.0" promptText="Fill Your Account">
                            <font>
                               <Font name="Corbel Italic" size="15.0" />
                            </font></TextField>
