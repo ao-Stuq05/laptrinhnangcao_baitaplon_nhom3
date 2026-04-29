@@ -1,7 +1,4 @@
 package com.auction.shared.model;
-
-import com.auction.shared.model.Entity;
-
 /**
  * Abstract base class for all user types: Bidder, Seller, Admin.
  */
@@ -12,8 +9,8 @@ public abstract class User extends Entity {
     protected String passwordHash;
     protected boolean isActive;
 
-    protected User(String username, String email, String passwordHash) {
-        super();
+    protected User(String id,String username, String email, String passwordHash) {
+        super(id);
         this.username = username;
         this.email = email;
         this.passwordHash = passwordHash;
@@ -24,12 +21,14 @@ public abstract class User extends Entity {
     public abstract String getRole();
 
     /**
-     * Simple login check — in production, use BCrypt.
-     * Returns true if the provided raw password matches the stored hash.
+     * Xác thực password sử dụng BCrypt.
+     * So sánh rawPassword với passwordHash đã lưu trong database.
+     * 
+     * @param rawPassword Password người dùng nhập (chưa hash)
+     * @return true nếu password khớp, false nếu không khớp
      */
     public boolean login(String rawPassword) {
-        // TODO: replace with BCrypt.checkpw(rawPassword, passwordHash)
-        return passwordHash.equals(rawPassword);
+        return PasswordUtil.verify(rawPassword, passwordHash);
     }
 
     @Override
@@ -41,7 +40,9 @@ public abstract class User extends Entity {
     // Getters / Setters
     public String getUsername() { return username; }
     public String getEmail() { return email; }
+    public String getPasswordHash() { return passwordHash; }
     public boolean isActive() { return isActive; }
     public void setActive(boolean active) { isActive = active; }
     public void setEmail(String email) { this.email = email; }
+
 }

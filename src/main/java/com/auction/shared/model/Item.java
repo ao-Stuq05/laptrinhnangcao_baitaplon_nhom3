@@ -1,11 +1,4 @@
 package com.auction.shared.model;
-
-import com.auction.shared.model.Entity;
-import com.auction.shared.model.Seller;
-
-/**
- * Abstract base class for auctionable items.
- */
 public abstract class Item extends Entity {
 
     protected String name;

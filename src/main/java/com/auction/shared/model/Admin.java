@@ -1,30 +1,27 @@
 package com.auction.shared.model;
 
-import com.auction.shared.model.Auction;
-import com.auction.shared.model.AuctionStatus;
+import java.util.UUID;
 
 public class Admin extends User {
 
+    private static final long serialVersionUID = 1L;
+
+    private String adminLevel; // "SUPER" | "NORMAL"
+
     public Admin(String username, String email, String passwordHash) {
-        super(username, email, passwordHash);
+        super(UUID.randomUUID().toString(), username, email, passwordHash);
+        this.adminLevel = "NORMAL";
+    }
+
+    public Admin(String id, String username, String email,
+                 String passwordHash, String adminLevel) {
+        super(id, username, email, passwordHash);
+        this.adminLevel = adminLevel;
     }
 
     @Override
     public String getRole() { return "ADMIN"; }
 
-    public void cancelAuction(Auction auction) {
-        auction.cancel();
-        System.out.println("[ADMIN] Cancelled auction: " + auction.getId());
-    }
-
-    public void deactivateUser(User user) {
-        user.setActive(false);
-        System.out.println("[ADMIN] Deactivated user: " + user.getUsername());
-    }
-
-    @Override
-    public void printInfo() {
-        super.printInfo();
-        System.out.println("  [ADMIN privileges]");
-    }
+    public String getAdminLevel()             { return adminLevel; }
+    public void setAdminLevel(String level)   { this.adminLevel = level; }
 }

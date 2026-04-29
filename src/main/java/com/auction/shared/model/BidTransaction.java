@@ -20,7 +20,7 @@ public class BidTransaction extends Entity {
      * timestamp tu dong gan khi tao bid moi, khong can truyen tu ngoai vao. Vi du: new BidTransaction(bidder, 1000, auctionId)             
      */
     public BidTransaction(Bidder bidder, double bidAmount, String auctionId) {
-        super(UUID.randomUUID().toString());// id nau
+        super(UUID.randomUUID().toString());
         // Validate đầu vào — không chờ DB mới phát hiện lỗi
         if (bidder == null) {
             throw new IllegalArgumentException("Bidder không được null");

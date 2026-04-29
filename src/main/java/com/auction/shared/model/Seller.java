@@ -10,12 +10,11 @@ public class Seller extends User {
     private List<Item> listedItems;
     private double rating; // 0.0 – 5.0
 
-    public Seller( String username, String email, String passwordHash, String shopName) {
-        // Cập nhật super để khớp với Class User (thường có thêm trường ID)
-        super(username, email, passwordHash);
+    public Seller( String id, String username, String email, String passwordHash, String shopName,double rating) {
+        super(id, username, email, passwordHash);
         this.shopName = shopName;
         this.listedItems = new ArrayList<>();
-        this.rating = 0.0;
+        this.rating = rating;
     }
 
     @Override
