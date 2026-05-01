@@ -8,13 +8,13 @@ public class Auction extends Entity {
 
     // ── Fields ────────────────────────────────────────────────
     private Item item;
-    private Seller seller;           
+    private Seller seller;
     private AuctionStatus status;
     private double currentPrice;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private Bidder highestBidder;    
-    private Bidder winner;          
+    private Bidder highestBidder;
+    private Bidder winner;
     private List<BidTransaction> bidHistory;
 
     // Observer Pattern — thread-safe
@@ -61,16 +61,19 @@ public class Auction extends Entity {
     /**
      * Constructor 3: Rút gọn — Seller chỉ truyền item + endTime
      */
-public Auction(Item item, LocalDateTime endTime) {
+    public Auction(Item item, LocalDateTime endTime) {
         // Tự tạo ID duy nhất và gọi lại Constructor 1 bằng từ khóa this()
         // Hoặc gọi trực tiếp super()
-        super("AUC-" + System.currentTimeMillis()); 
-        
+        super("AUC-" + System.currentTimeMillis());
+
         this.item = item;
         this.startTime = LocalDateTime.now(); // Tự động lấy giờ hiện tại
         this.endTime = endTime;
         this.currentPrice = item.getBasePrice();
         this.status = AuctionStatus.OPEN;
+
+        // Đã sửa lỗi: Khởi tạo bidHistory để tránh NullPointerException
+        this.bidHistory = new CopyOnWriteArrayList<>();
     }
 
     // ── Core methods ──────────────────────────────────────────
@@ -86,6 +89,23 @@ public Auction(Item item, LocalDateTime endTime) {
             System.out.println("Phiên " + getId() + " đã bị hủy.");
         } else {
             System.out.println("Lỗi: Không thể hủy phiên đã kết thúc.");
+        }
+    }
+
+    // Đã thêm: Hàm kết thúc phiên đấu giá
+    public void endAuction() {
+        if (this.status == AuctionStatus.FINISHED || this.status == AuctionStatus.CANCELLED) {
+            return; // Nếu đã kết thúc hoặc bị hủy rồi thì thôi
+        }
+
+        this.status = AuctionStatus.FINISHED;
+
+        // Nếu có người từng đặt giá, người đó chính là Winner
+        if (highestBidder != null) {
+            this.winner = highestBidder;
+            System.out.println(">> Phiên kết thúc! Người thắng: " + winner.getUsername() + " với giá " + currentPrice);
+        } else {
+            System.out.println(">> Phiên kết thúc! Không có ai đặt giá.");
         }
     }
 
@@ -113,46 +133,3 @@ public Auction(Item item, LocalDateTime endTime) {
     // ── Observer Pattern ──────────────────────────────────────
 
     public void addObserver(AuctionObserver observer) {
-        if (observer != null && !observers.contains(observer)) {
-            observers.add(observer);
-        }
-    }
-
-    public void removeObserver(AuctionObserver observer) {
-        observers.remove(observer);
-    }
-
-    public void notifyObservers(BidTransaction transaction) {
-        for (AuctionObserver observer : observers) {
-            observer.onBidPlaced(transaction);
-        }
-    }
-
-    // ── printInfo() — bắt buộc từ Entity ─────────────────────
-
-    @Override
-    public void printInfo() {
-        System.out.println("Auction: " + getId()
-            + " | " + item.getName()
-            + " | " + status
-            + " | Giá: " + currentPrice);
-    }
-
-    // ── Getters ───────────────────────────────────────────────
-
-    public Item getItem()                { return item; }
-    public Seller getSeller()            { return seller; }
-    public AuctionStatus getStatus()     { return status; }
-    public double getCurrentPrice()      { return currentPrice; }
-    public LocalDateTime getStartTime()  { return startTime; }
-    public LocalDateTime getEndTime()    { return endTime; }
-    public Bidder getLeadingBidder()     { return highestBidder; }
-    public Bidder getWinner()            { return winner; }
-    public List<BidTransaction> getBids(){ return bidHistory; }
-
-    // ── Setters — AuctionManager cần ─────────────────────────
-
-    public void setStatus(AuctionStatus status)   { this.status = status; }
-    public void setWinner(Bidder winner)           { this.winner = winner; }
-    public void setEndTime(LocalDateTime endTime)  { this.endTime = endTime; }
-}
