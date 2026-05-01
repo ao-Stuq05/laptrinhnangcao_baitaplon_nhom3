@@ -133,3 +133,46 @@ public class Auction extends Entity {
     // ── Observer Pattern ──────────────────────────────────────
 
     public void addObserver(AuctionObserver observer) {
+        if (observer != null && !observers.contains(observer)) {
+            observers.add(observer);
+        }
+    }
+
+    public void removeObserver(AuctionObserver observer) {
+        observers.remove(observer);
+    }
+
+    public void notifyObservers(BidTransaction transaction) {
+        for (AuctionObserver observer : observers) {
+            observer.onBidPlaced(transaction);
+        }
+    }
+
+    // ── printInfo() — bắt buộc từ Entity ─────────────────────
+
+    @Override
+    public void printInfo() {
+        System.out.println("Auction: " + getId()
+                + " | " + item.getName()
+                + " | " + status
+                + " | Giá: " + currentPrice);
+    }
+
+    // ── Getters ───────────────────────────────────────────────
+
+    public Item getItem()                { return item; }
+    public Seller getSeller()            { return seller; }
+    public AuctionStatus getStatus()     { return status; }
+    public double getCurrentPrice()      { return currentPrice; }
+    public LocalDateTime getStartTime()  { return startTime; }
+    public LocalDateTime getEndTime()    { return endTime; }
+    public Bidder getLeadingBidder()     { return highestBidder; }
+    public Bidder getWinner()            { return winner; }
+    public List<BidTransaction> getBids(){ return bidHistory; }
+
+    // ── Setters — AuctionManager cần ─────────────────────────
+
+    public void setStatus(AuctionStatus status)   { this.status = status; }
+    public void setWinner(Bidder winner)           { this.winner = winner; }
+    public void setEndTime(LocalDateTime endTime)  { this.endTime = endTime; }
+}
