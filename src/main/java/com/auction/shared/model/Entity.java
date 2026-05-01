@@ -12,13 +12,13 @@ public abstract class Entity {
     protected String id;
     protected LocalDateTime createdAt;
     protected LocalDateTime updatedAt;
-
+    /// constructor khoi tao khi Entity chua co trong he thong
     protected Entity() {
         this.id = UUID.randomUUID().toString();
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
-
+    /// constructor khoi tao khi Entity da co trong he thong
     protected Entity(String id) {
         this.id = id;
         this.createdAt = LocalDateTime.now();
@@ -37,8 +37,8 @@ public abstract class Entity {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Entity)) return false;
-        Entity entity = (Entity) o;
+        // Vừa kiểm tra, vừa ép kiểu o thành biến entity luôn nếu đúng
+        if (!(o instanceof Entity entity)) return false;
         return Objects.equals(id, entity.id);
     }
 
