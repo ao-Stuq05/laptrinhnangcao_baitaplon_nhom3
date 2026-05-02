@@ -1,8 +1,11 @@
 package com.auction.shared.model;
+import java.io.Serializable;
 /**
  * Abstract base class for all user types: Bidder, Seller, Admin.
  */
-public abstract class User extends Entity {
+public abstract class User extends Entity implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     protected String username;
     protected String email;

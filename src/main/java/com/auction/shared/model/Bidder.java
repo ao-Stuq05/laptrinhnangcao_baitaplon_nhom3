@@ -2,7 +2,7 @@ package com.auction.shared.model;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
+import java.io.Serializable;
 /**
  * Người đấu giá (Bidder) - là một loại User tham gia đấu giá.
  * 
@@ -15,7 +15,10 @@ import java.util.UUID;
  *   Bidder bidder = new Bidder(username, email, passwordHash);
  * </pre>
  */
-public class Bidder extends User {
+public class Bidder extends User implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private double balance;
     private List<BidTransaction> bidHistory;
 

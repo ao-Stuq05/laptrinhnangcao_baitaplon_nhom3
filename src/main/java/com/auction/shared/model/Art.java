@@ -1,6 +1,11 @@
 package com.auction.shared.model;
 
-public class Art extends Item {
+import java.io.Serializable;
+
+public class Art extends Item implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private String artistName;
     private int creationYear;
 

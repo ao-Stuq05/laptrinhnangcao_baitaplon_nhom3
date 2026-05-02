@@ -3,8 +3,11 @@ package com.auction.shared.model;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.io.Serializable;
 
-public class Auction extends Entity {
+public class Auction extends Entity implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     // ── Fields ────────────────────────────────────────────────
     private Item item;

@@ -1,6 +1,11 @@
 package com.auction.shared.model;
 
-public class Vehicle extends Item {
+import java.io.Serializable;
+
+public class Vehicle extends Item implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private String licensePlate;
     private int mileage;
 

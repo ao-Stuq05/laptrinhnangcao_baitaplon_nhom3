@@ -3,8 +3,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.io.Serializable;
 
-public class Seller extends User {
+public class Seller extends User implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private String shopName;
     private List<Item> listedItems;

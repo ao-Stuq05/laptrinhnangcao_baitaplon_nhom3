@@ -1,6 +1,11 @@
 package com.auction.shared.model;
 
-public class Electronics extends Item {
+import java.io.Serializable;
+
+public class Electronics extends Item implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private int warrantyMonths;
 
     public Electronics(String id, String name, String description, double basePrice,Seller seller, int warrantyMonths) {

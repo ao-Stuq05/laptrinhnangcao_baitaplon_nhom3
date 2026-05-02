@@ -3,11 +3,15 @@ package com.auction.shared.model;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
+import java.io.Serializable;
+
 
 /**
  * Abstract base class for all domain entities in the auction system.
  */
-public abstract class Entity {
+public abstract class Entity implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     protected String id;
     protected LocalDateTime createdAt;
