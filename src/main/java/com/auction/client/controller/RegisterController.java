@@ -1,6 +1,8 @@
 package com.auction.client.controller;
 
 import com.auction.client.SceneManager;
+import com.auction.client.network.ServerConnection; // <-- IMPORT THÊM BƯU TÁ
+import com.auction.shared.model.Message;          // <-- IMPORT THÊM PHONG BÌ
 import com.auction.shared.model.Bidder;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
@@ -22,6 +24,7 @@ public class RegisterController {
         String password = txtPassword.getText().trim();
         String confirm  = txtConfirmPassword.getText().trim();
 
+        // 1. Kiểm tra dữ liệu đầu vào
         if (name.isEmpty() || email.isEmpty() ||
                 password.isEmpty() || confirm.isEmpty()) {
             showError("Vui lòng nhập đầy đủ thông tin!");
@@ -38,13 +41,30 @@ public class RegisterController {
             return;
         }
 
-        // Tạo Bidder mới — username = txtName, passwordHash = password tạm thời
-        // Sau này gửi object này lên server để lưu DB
+        // 2. Tạo đối tượng Bidder mới
         Bidder newBidder = new Bidder(name, email, password);
         newBidder.printInfo(); // in ra console để kiểm tra
 
-        System.out.println("✅ Đăng kí thành công!");
-        SceneManager.switchScene("login.fxml");
+        // 3. TÍCH HỢP GỬI MẠNG LÊN SERVER
+        try {
+            // Gọi bưu tá
+            ServerConnection conn = ServerConnection.getInstance();
+
+            // Đóng gói thông tin vào Message với nhãn "REGISTER"
+            Message requestMsg = new Message("REGISTER", newBidder);
+
+            // Gửi đi!
+            conn.sendMessage(requestMsg);
+            System.out.println(">>> Đã gửi yêu cầu ĐĂNG KÝ qua mạng lên Server!");
+
+            // Chuyển về màn hình đăng nhập (Tạm thời chuyển luôn, sau này có luồng lắng nghe sẽ đợi Server báo SUCCESS mới chuyển)
+            System.out.println("✅ Gửi lệnh đăng kí thành công!");
+            SceneManager.switchScene("login.fxml");
+
+        } catch (Exception e) {
+            showError("Lỗi kết nối đến Server!");
+            e.printStackTrace();
+        }
     }
 
     @FXML

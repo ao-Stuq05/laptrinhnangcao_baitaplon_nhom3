@@ -6,13 +6,12 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="560.0" prefWidth="820.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="560.0" prefWidth="820.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.RegisterController">
     <children>
-
 
         <ImageView fitHeight="560.0" fitWidth="820.0" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <image>
-                <Image url="@../../../../../resources/assets/background.jpg" />
+                <Image url="@/assets/background.jpg" />
             </image>
         </ImageView>
 
@@ -22,87 +21,93 @@
                 <VBox alignment="CENTER" spacing="6.0">
                     <children>
                         <Label alignment="CENTER" maxWidth="900.0" text="Welcome To" textFill="#d9d322">
-                     <font>
-                        <Font name="Berlin Sans FB Demi Bold" size="32.0" />
-                     </font></Label>
+                            <font>
+                                <Font name="Berlin Sans FB Demi Bold" size="32.0" />
+                            </font></Label>
                         <Label alignment="CENTER" maxWidth="900.0" text="AUCTION SYSTEM" textFill="#d9d322">
-                     <font>
-                        <Font name="Berlin Sans FB Demi Bold" size="32.0" />
-                     </font></Label>
+                            <font>
+                                <Font name="Berlin Sans FB Demi Bold" size="32.0" />
+                            </font></Label>
                     </children>
                 </VBox>
 
-                <VBox alignment="CENTER" prefHeight="413.0" prefWidth="815.0" spacing="14.0" style="-fx-background-color: rgba(255,255,255,0.08);                          -fx-border-color: rgba(255,255,255,0.15);                          -fx-background-radius: 10;                          -fx-border-radius: 10;                          -fx-border-width: 1;                          -fx-padding: 28 40 28 40;">
+                <VBox alignment="CENTER" prefHeight="413.0" prefWidth="815.0" spacing="14.0" style="-fx-background-color: rgba(255,255,255,0.08); -fx-border-color: rgba(255,255,255,0.15); -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-width: 1; -fx-padding: 28 40 28 40;">
                     <children>
 
                         <Label text="ĐĂNG KÍ TÀI KHOẢN">
-                     <font>
-                        <Font name="Georgia" size="17.0" />
-                     </font>
-                     <textFill>
-                        <LinearGradient endX="0.7537878787878788">
-                           <stops>
-                              <Stop>
-                                 <color>
-                                    <Color red="0.05964912101626396" green="0.8947368264198303" />
-                                 </color>
-                              </Stop>
-                              <Stop offset="1.0">
-                                 <color>
-                                    <Color red="0.46000000834465027" green="1.0" blue="0.5833620429039001" />
-                                 </color>
-                              </Stop>
-                           </stops>
-                        </LinearGradient>
-                     </textFill></Label>
+                            <font>
+                                <Font name="Georgia" size="17.0" />
+                            </font>
+                            <textFill>
+                                <LinearGradient endX="0.7537878787878788">
+                                    <stops>
+                                        <Stop>
+                                            <color>
+                                                <Color red="0.05964912101626396" green="0.8947368264198303" />
+                                            </color>
+                                        </Stop>
+                                        <Stop offset="1.0">
+                                            <color>
+                                                <Color red="0.46000000834465027" green="1.0" blue="0.5833620429039001" />
+                                            </color>
+                                        </Stop>
+                                    </stops>
+                                </LinearGradient>
+                            </textFill></Label>
 
                         <VBox alignment="CENTER" spacing="5.0">
                             <children>
-                                <Label prefHeight="19.0" prefWidth="335.0" text="Họ Tên">
-                           <font>
-                              <Font name="Arial Bold Italic" size="14.0" />
-                           </font></Label>
-                                <TextField maxWidth="340.0" prefHeight="43.0" prefWidth="340.0" promptText="Nhập họ và tên" />
+                                <Label prefHeight="19.0" prefWidth="335.0" text="Họ Tên" textFill="WHITE">
+                                    <font>
+                                        <Font name="Arial Bold Italic" size="14.0" />
+                                    </font></Label>
+                                <TextField fx:id="txtFullName" maxWidth="340.0" prefHeight="43.0" prefWidth="340.0" promptText="Nhập họ và tên" />
                             </children>
                         </VBox>
 
                         <VBox alignment="CENTER" spacing="5.0">
                             <children>
-                                <Label prefHeight="19.0" prefWidth="338.0" text="Email">
-                           <font>
-                              <Font name="Arial Bold Italic" size="14.0" />
-                           </font></Label>
-                                <TextField maxWidth="340.0" prefHeight="42.0" promptText="Nhập email" style="-fx-background-color: rgba(255,255,255,0.92);                                           -fx-border-color: transparent;                                           -fx-border-radius: 5;                                           -fx-background-radius: 5;                                           -fx-font-size: 14px;                                           -fx-padding: 0 12;" />
+                                <Label prefHeight="19.0" prefWidth="338.0" text="Email" textFill="WHITE">
+                                    <font>
+                                        <Font name="Arial Bold Italic" size="14.0" />
+                                    </font></Label>
+                                <TextField fx:id="txtEmail" maxWidth="340.0" prefHeight="42.0" promptText="Nhập email" style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-border-radius: 5; -fx-background-radius: 5; -fx-font-size: 14px; -fx-padding: 0 12;" />
                             </children>
                         </VBox>
 
                         <VBox alignment="CENTER" spacing="5.0">
                             <children>
-                                <Label prefHeight="19.0" prefWidth="336.0" text="Mật Khẩu">
-                           <font>
-                              <Font name="Arial Bold Italic" size="14.0" />
-                           </font></Label>
-                                <PasswordField maxWidth="340.0" prefHeight="42.0" promptText="Nhập mật khẩu" />
+                                <Label prefHeight="19.0" prefWidth="336.0" text="Mật Khẩu" textFill="WHITE">
+                                    <font>
+                                        <Font name="Arial Bold Italic" size="14.0" />
+                                    </font></Label>
+                                <PasswordField fx:id="txtPassword" maxWidth="340.0" prefHeight="42.0" promptText="Nhập mật khẩu" />
                             </children>
                         </VBox>
 
                         <VBox alignment="CENTER" spacing="5.0">
                             <children>
-                                <Label prefHeight="19.0" prefWidth="337.0" text="Xác Nhận Mật Khẩu">
-                           <font>
-                              <Font name="Arial Bold Italic" size="14.0" />
-                           </font></Label>
-                                <PasswordField maxWidth="340.0" prefHeight="42.0" promptText="Nhập lại mật khẩu" />
+                                <Label prefHeight="19.0" prefWidth="337.0" text="Xác Nhận Mật Khẩu" textFill="WHITE">
+                                    <font>
+                                        <Font name="Arial Bold Italic" size="14.0" />
+                                    </font></Label>
+                                <PasswordField fx:id="txtConfirmPassword" maxWidth="340.0" prefHeight="42.0" promptText="Nhập lại mật khẩu" />
                             </children>
                         </VBox>
 
-                        <Button mnemonicParsing="false" prefHeight="42.0" prefWidth="340.0" style="-fx-background-color: #0d3d6e; -fx-text-fill: white;" text="ĐĂNG KÍ">
+                        <Label fx:id="lblError" text="Lỗi hiển thị ở đây" textFill="#ff5555" visible="false">
+                            <font>
+                                <Font name="System Bold" size="13.0" />
+                            </font>
+                        </Label>
+
+                        <Button onAction="#handleRegister" mnemonicParsing="false" prefHeight="42.0" prefWidth="340.0" style="-fx-background-color: #0d3d6e; -fx-text-fill: white; -fx-cursor: hand;" text="ĐĂNG KÍ">
                             <font>
                                 <Font name="System Bold" size="14.0" />
                             </font>
                         </Button>
 
-                        <Button mnemonicParsing="false" style="-fx-background-color: transparent;                                  -fx-text-fill: rgba(255,255,255,0.70);                                  -fx-font-style: italic;                                  -fx-font-size: 12px;                                  -fx-border-color: transparent;                                  -fx-cursor: hand;" text="Đã có tài khoản ? Đăng nhập" />
+                        <Button onAction="#handleGoLogin" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: rgba(255,255,255,0.70); -fx-font-style: italic; -fx-font-size: 13px; -fx-border-color: transparent; -fx-cursor: hand;" text="Đã có tài khoản ? Đăng nhập" />
 
                     </children>
                 </VBox>
