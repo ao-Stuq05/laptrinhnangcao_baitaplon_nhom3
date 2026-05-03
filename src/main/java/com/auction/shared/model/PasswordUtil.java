@@ -19,9 +19,21 @@ public class PasswordUtil {
      * 
      * @param rawPassword Password người dùng nhập
      * @param hashedPassword Password đã hash trong database
+     *                       hoặc plain text khi hệ thống chưa chuyển sang BCrypt.
      * @return true nếu password khớp, false nếu không khớp
      */
     public static boolean verify(String rawPassword, String hashedPassword) {
-        return BCrypt.checkpw(rawPassword, hashedPassword);
+        if (hashedPassword == null || rawPassword == null) {
+            return false;
+        }
+
+        // Hỗ trợ cả BCrypt hash và dữ liệu mật khẩu chưa mã hoá hiện có.
+        if (hashedPassword.startsWith("$2a$")
+                || hashedPassword.startsWith("$2b$")
+                || hashedPassword.startsWith("$2y$")) {
+            return BCrypt.checkpw(rawPassword, hashedPassword);
+        }
+
+        return rawPassword.equals(hashedPassword);
     }
 }
