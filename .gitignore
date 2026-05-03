@@ -1,5 +1,12 @@
+# IDE folders
 .idea/
-*.iml
 .vscode/
-out/
+*.iml
+
+# Build artifacts
 target/
+out/
+
+# OS generated files
+.DS_Store
+Thumbs.db
