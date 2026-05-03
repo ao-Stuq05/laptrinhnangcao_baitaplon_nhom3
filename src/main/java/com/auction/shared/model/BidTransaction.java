@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 
-public class BidTransaction extends Entity {
+public class BidTransaction extends Entity implements Serializable {
 
     // serialVersionUID bắt buộc khi implements Serializable
     // Nếu không có, Java tự tạo ngẫu nhiên → lỗi khi deserialize
