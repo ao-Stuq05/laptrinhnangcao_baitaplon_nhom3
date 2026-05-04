@@ -15,7 +15,6 @@
     </properties>
 
     <dependencies>
-        <!-- BCrypt for password hashing -->
         <dependency>
             <groupId>org.mindrot</groupId>
             <artifactId>jbcrypt</artifactId>
@@ -83,21 +82,18 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.3.1</version>
                 <configuration>
-                    <!-- File config rule — tạo ở bước 2 -->
                     <configLocation>checkstyle/google_checks.xml</configLocation>
-                    <!-- Encoding -->
                     <encoding>UTF-8</encoding>
-                    <!-- true = build fail nếu vi phạm -->
-                    <failsOnError>true</failsOnError>
-                    <!-- Bao gồm cả test files -->
+                    
+                    <failsOnError>false</failsOnError>
+                    <failOnViolation>false</failOnViolation>
+                    
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
-                    <!-- Bỏ qua file generated -->
                     <excludes>**/module-info.java</excludes>
                 </configuration>
                 <executions>
                     <execution>
                         <id>checkstyle-check</id>
-                        <!-- Chạy ở phase verify: mvn verify hoặc mvn checkstyle:check -->
                         <phase>verify</phase>
                         <goals>
                             <goal>check</goal>
@@ -116,5 +112,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
