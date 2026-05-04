@@ -52,7 +52,8 @@ public class AuctionDAO {
             // winner_id có thể null (chưa có winner)
             if (auction.getWinner() != null) {
                 ps.setString(8, auction.getWinner().getId());
-            } else {
+            } 
+            else {
                 ps.setNull(8, Types.VARCHAR);
             }
 
