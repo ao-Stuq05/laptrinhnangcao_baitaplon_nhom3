@@ -46,8 +46,8 @@ public class AuctionDAO {
             ps.setString(3, auction.getSeller().getId());
             ps.setString(4, auction.getStatus().name());
             ps.setDouble(5, auction.getCurrentPrice());
-            ps.setString(6, auction.getStartTime().toString());
-            ps.setString(7, auction.getEndTime().toString());
+            ps.setTimestamp(6, Timestamp.valueOf(auction.getStartTime()));
+            ps.setTimestamp(7, Timestamp.valueOf(auction.getEndTime()));
 
             // winner_id có thể null (chưa có winner)
             if (auction.getWinner() != null) {
@@ -57,8 +57,8 @@ public class AuctionDAO {
                 ps.setNull(8, Types.VARCHAR);
             }
 
-            ps.setString(9,  auction.getCreatedAt().toString());
-            ps.setString(10, auction.getUpdatedAt().toString());
+            ps.setTimestamp(9,  Timestamp.valueOf(auction.getCreatedAt()));
+            ps.setTimestamp(10, Timestamp.valueOf(auction.getUpdatedAt()));
             ps.executeUpdate();
             System.out.println("[AuctionDAO] Đã lưu phiên: " + auction.getId());
         }
@@ -122,7 +122,7 @@ public class AuctionDAO {
             ps.setDouble(2, currentPrice);
             if (winnerId != null) ps.setString(3, winnerId);
             else ps.setNull(3, Types.VARCHAR);
-            ps.setString(4, LocalDateTime.now().toString());
+            ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
             ps.setString(5, auctionId);
             ps.executeUpdate();
         }
@@ -133,8 +133,8 @@ public class AuctionDAO {
         String sql = "UPDATE auctions SET end_time = ?, updated_at = ? WHERE id = ?";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, newEndTime.toString());
-            ps.setString(2, LocalDateTime.now().toString());
+            ps.setTimestamp(1, Timestamp.valueOf(newEndTime));
+            ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
             ps.setString(3, auctionId);
             ps.executeUpdate();
         }
@@ -155,8 +155,8 @@ public class AuctionDAO {
             } else {
                 ps.setNull(3, Types.VARCHAR);
             }
-            ps.setString(4, auction.getEndTime().toString());
-            ps.setString(5, LocalDateTime.now().toString());
+            ps.setTimestamp(4, Timestamp.valueOf(auction.getEndTime()));
+            ps.setTimestamp(5, Timestamp.valueOf(LocalDateTime.now()));
             ps.setString(6, auction.getId());
             ps.executeUpdate();
             System.out.println("[AuctionDAO] Đã cập nhật phiên: " + auction.getId());
@@ -181,8 +181,8 @@ public class AuctionDAO {
         String sellerId     = rs.getString("seller_id");
         AuctionStatus status = AuctionStatus.valueOf(rs.getString("status"));
         double currentPrice = rs.getDouble("current_price");
-        LocalDateTime start = LocalDateTime.parse(rs.getString("start_time"));
-        LocalDateTime end   = LocalDateTime.parse(rs.getString("end_time"));
+        LocalDateTime start = rs.getTimestamp("start_time").toLocalDateTime();
+        LocalDateTime end   = rs.getTimestamp("end_time").toLocalDateTime();
         String winnerId     = rs.getString("winner_id");
         Item item     = itemDAO.findById(itemId).orElseThrow();
         Seller seller = (Seller) userDAO.findById(sellerId).orElseThrow();

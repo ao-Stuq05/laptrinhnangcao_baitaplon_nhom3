@@ -31,8 +31,8 @@ public class ItemDAO {
             ps.setDouble(4, item.getBasePrice());
             ps.setString(5, item.getCategory());
             ps.setString(6, item.getSeller().getId());
-            ps.setString(7, item.getCreatedAt().toString());
-            ps.setString(8, item.getUpdatedAt().toString());
+            ps.setTimestamp(7, Timestamp.valueOf(item.getCreatedAt()));
+            ps.setTimestamp(8, Timestamp.valueOf(item.getUpdatedAt()));
             ps.executeUpdate();
             System.out.println("[ItemDAO] Đã lưu item: " + item.getName());
         }
@@ -83,7 +83,7 @@ public class ItemDAO {
             ps.setString(1, item.getName());
             ps.setString(2, item.getDescription());
             ps.setDouble(3, item.getBasePrice());
-            ps.setString(4, LocalDateTime.now().toString());
+            ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
             ps.setString(5, item.getId());
             ps.executeUpdate();
             System.out.println("[ItemDAO] Đã cập nhật item: " + item.getId());

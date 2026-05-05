@@ -57,8 +57,8 @@ public class UserDAO {
                 ps.setDouble(8, 0.0);
             }
 
-            ps.setString(9,  user.getCreatedAt().toString());
-            ps.setString(10, user.getUpdatedAt().toString());
+            ps.setTimestamp(9,  Timestamp.valueOf(user.getCreatedAt()));
+            ps.setTimestamp(10, Timestamp.valueOf(user.getUpdatedAt()));
 
             ps.executeUpdate();
             System.out.println("[UserDAO] Đã lưu user: " + user.getUsername());
@@ -145,7 +145,7 @@ public class UserDAO {
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt   (1, isActive ? 1 : 0);
-            ps.setString(2, java.time.LocalDateTime.now().toString());
+            ps.setTimestamp(2, Timestamp.valueOf(java.time.LocalDateTime.now()));
             ps.setString(3, userId);
             ps.executeUpdate();
         }
@@ -159,7 +159,7 @@ public class UserDAO {
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setDouble(1, newBalance);
-            ps.setString(2, java.time.LocalDateTime.now().toString());
+            ps.setTimestamp(2, Timestamp.valueOf(java.time.LocalDateTime.now()));
             ps.setString(3, bidderId);
             ps.executeUpdate();
         }
