@@ -4,82 +4,71 @@ import com.auction.client.SceneManager;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
 import javafx.util.Duration;
 
 public class ProductController {
 
-    // ===== FXML FIELDS =====
-    @FXML private ImageView  imgProduct;
-    @FXML private Label      lblProductName;
-    @FXML private Label      lblCategory;
-    @FXML private Label      lblStartPrice;
-    @FXML private Label      lblStatus;
-    @FXML private Label      lblCurrentPrice;
-    @FXML private Label      lblHours;
-    @FXML private Label      lblMinutes;
-    @FXML private Label      lblSeconds;
-    @FXML private Label      lblBidError;
-    @FXML private TextField  txtBidAmount;
-    @FXML private TableView  tableBidHistory;
+    // Kết nối với fx:id trong Product.fxml
+    @FXML private ImageView   imgProduct;
+    @FXML private Label       lblProductName;
+    @FXML private Label       lblCategory;
+    @FXML private Label       lblStartPrice;
+    @FXML private Label       lblStatus;
+    @FXML private Label       lblCurrentPrice;
+    @FXML private Label       lblHours;
+    @FXML private Label       lblMinutes;
+    @FXML private Label       lblSeconds;
+    @FXML private Label       lblBidError;
+    @FXML private TextField   txtBidAmount;
+    @FXML private TableView   tableBidHistory;
     @FXML private TableColumn colBidder;
     @FXML private TableColumn colPrice;
     @FXML private TableColumn colTime;
 
-    // Đồng hồ đếm ngược
     private Timeline countdown;
-    private int totalSeconds = 2 * 3600 + 39 * 60 + 46; // 02:39:46
-
-    // Giá hiện tại (tạm hardcode — sau thay bằng data từ server)
+    private int totalSeconds = 2 * 3600 + 39 * 60 + 46;
     private double currentPrice = 62_000_000;
 
-    // ===== KHỞI TẠO =====
+    // Chạy tự động khi FXML load xong
     @FXML
     public void initialize() {
         loadProductData();
-        setupTableColumns();
         startCountdown();
     }
 
     private void loadProductData() {
-        // Tạm hardcode — sau này nhận từ màn hình trước qua static field hoặc Singleton
         lblProductName.setText("Đồng hồ Rolex cổ");
         lblCategory.setText("Đồng hồ & Trang sức");
         lblStartPrice.setText("50,000,000đ");
         lblStatus.setText("● Đang mở bán");
         lblCurrentPrice.setText(formatPrice(currentPrice));
+        lblHours.setText("02");
+        lblMinutes.setText("39");
+        lblSeconds.setText("46");
     }
 
-    private void setupTableColumns() {
-        colBidder.setCellValueFactory(new PropertyValueFactory<>("bidderName"));
-        colPrice.setCellValueFactory(new PropertyValueFactory<>("amount"));
-        colTime.setCellValueFactory(new PropertyValueFactory<>("time"));
-    }
-
-    // ===== ĐỒNG HỒ ĐẾM NGƯỢC =====
     private void startCountdown() {
         countdown = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             if (totalSeconds <= 0) {
                 countdown.stop();
                 lblStatus.setText("● Đã kết thúc");
-                lblStatus.setStyle("-fx-text-fill: #ff6b6b;");
                 return;
             }
             totalSeconds--;
-            int h = totalSeconds / 3600;
-            int m = (totalSeconds % 3600) / 60;
-            int s = totalSeconds % 60;
-            lblHours.setText(String.format("%02d", h));
-            lblMinutes.setText(String.format("%02d", m));
-            lblSeconds.setText(String.format("%02d", s));
+            lblHours.setText(String.format("%02d", totalSeconds / 3600));
+            lblMinutes.setText(String.format("%02d", (totalSeconds % 3600) / 60));
+            lblSeconds.setText(String.format("%02d", totalSeconds % 60));
         }));
         countdown.setCycleCount(Timeline.INDEFINITE);
         countdown.play();
     }
 
-    // ===== ĐẶT GIÁ =====
+    // Kết nối với onAction="#handleBid" trong Product.fxml
     @FXML
     private void handleBid() {
         String input = txtBidAmount.getText().trim();
@@ -90,50 +79,41 @@ public class ProductController {
         }
 
         try {
-            double amount = Double.parseDouble(input.replace(",", "").replace(".", ""));
-
+            double amount = Double.parseDouble(input.replace(",", ""));
             if (amount <= currentPrice) {
-                showBidError("Giá đặt phải cao hơn giá hiện tại (" + formatPrice(currentPrice) + ")!");
+                showBidError("Giá phải cao hơn " + formatPrice(currentPrice) + "!");
                 return;
             }
-
-            // Cập nhật giá mới
             currentPrice = amount;
             lblCurrentPrice.setText(formatPrice(currentPrice));
             lblBidError.setVisible(false);
             txtBidAmount.clear();
             System.out.println("✅ Đặt giá: " + formatPrice(amount));
-
-            // Sau này: gửi lên server qua ServerConnection
-
+            // Sau này gửi lên server
         } catch (NumberFormatException e) {
             showBidError("Giá không hợp lệ! Chỉ nhập số.");
         }
     }
 
-    // ===== NAVIGATION =====
+    // Kết nối với onAction="#handleGoBack" trong Product.fxml
     @FXML
     private void handleGoBack() {
         stopCountdown();
         SceneManager.switchScene("UI.fxml");
     }
 
-    @FXML
-    private void handleGoHome() {
-        stopCountdown();
-        SceneManager.switchScene("UI.fxml");
-    }
-
+    // Kết nối với onAction="#handleLogout" trong Product.fxml
     @FXML
     private void handleLogout() {
         stopCountdown();
         SceneManager.switchScene("login.fxml");
     }
 
-    // ===== HELPERS =====
     private void showBidError(String msg) {
-        lblBidError.setText(msg);
-        lblBidError.setVisible(true);
+        if (lblBidError != null) {
+            lblBidError.setText(msg);
+            lblBidError.setVisible(true);
+        }
     }
 
     private void stopCountdown() {

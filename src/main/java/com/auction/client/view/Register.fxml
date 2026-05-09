@@ -11,7 +11,7 @@
 
         <ImageView fitHeight="560.0" fitWidth="820.0" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <image>
-                <Image url="@/assets/background.jpg" />
+                <Image url="@../../../../../resources/assets/background.jpg" />
             </image>
         </ImageView>
 
@@ -61,7 +61,7 @@
                                     <font>
                                         <Font name="Arial Bold Italic" size="14.0" />
                                     </font></Label>
-                                <TextField fx:id="txtFullName" maxWidth="340.0" prefHeight="43.0" prefWidth="340.0" promptText="Nhập họ và tên" />
+                                <TextField fx:id="txtName" maxWidth="340.0" prefHeight="43.0" prefWidth="340.0" promptText="Nhập họ và tên" />
                             </children>
                         </VBox>
 

@@ -28,14 +28,10 @@
             <VBox alignment="CENTER" spacing="6.0">
                <children>
                   <Label alignment="CENTER" maxWidth="900.0" text="Welcome To" textFill="#f8ff03">
-                     <font>
-                        <Font name="Bauhaus 93" size="24.0" />
-                     </font>
+                     <font><Font name="Bauhaus 93" size="24.0" /></font>
                   </Label>
                   <Label alignment="CENTER" maxWidth="900.0" text="AUCTION SYSTEM" textFill="#ffdd00">
-                     <font>
-                        <Font name="Book Antiqua Bold" size="30.0" />
-                     </font>
+                     <font><Font name="Book Antiqua Bold" size="30.0" /></font>
                   </Label>
                </children>
             </VBox>
@@ -43,26 +39,20 @@
             <VBox alignment="CENTER" spacing="14.0"
                   style="-fx-background-color: rgba(255,255,255,0.08);
                          -fx-border-color: rgba(255,255,255,0.15);
-                         -fx-background-radius: 10;
-                         -fx-border-radius: 10;
-                         -fx-border-width: 1;
-                         -fx-padding: 28 40 28 40;">
+                         -fx-background-radius: 10; -fx-border-radius: 10;
+                         -fx-border-width: 1; -fx-padding: 28 40 28 40;">
                <children>
 
                   <VBox alignment="CENTER" spacing="5.0">
                      <children>
                         <Label prefHeight="18.0" prefWidth="336.0" text="Account" textFill="WHITE">
-                           <font>
-                              <Font name="Droid Sans" size="15.0" />
-                           </font>
+                           <font><Font name="Droid Sans" size="15.0" /></font>
                         </Label>
                         <TextField fx:id="txtAccount"
                                    alignment="TOP_LEFT" maxWidth="340.0"
                                    prefHeight="42.0" prefWidth="738.0"
                                    promptText="Fill Your Account">
-                           <font>
-                              <Font name="Corbel Italic" size="15.0" />
-                           </font>
+                           <font><Font name="Corbel Italic" size="15.0" /></font>
                         </TextField>
                      </children>
                   </VBox>
@@ -70,17 +60,13 @@
                   <VBox alignment="CENTER" spacing="5.0">
                      <children>
                         <Label prefHeight="18.0" prefWidth="339.0" text="PassWord" textFill="WHITE">
-                           <font>
-                              <Font name="Droid Sans" size="15.0" />
-                           </font>
+                           <font><Font name="Droid Sans" size="15.0" /></font>
                         </Label>
                         <PasswordField fx:id="txtPassword"
                                        alignment="TOP_LEFT" maxWidth="340.0"
                                        prefHeight="42.0"
                                        promptText="Fill Your Password">
-                           <font>
-                              <Font name="Corbel Italic" size="15.0" />
-                           </font>
+                           <font><Font name="Corbel Italic" size="15.0" /></font>
                         </PasswordField>
                      </children>
                   </VBox>
@@ -88,34 +74,21 @@
                   <Label fx:id="lblError" visible="false"
                          style="-fx-text-fill: #ff6b6b; -fx-font-size: 12px;" />
 
-                  <Button fx:id="btnLogin"
-                          onAction="#handleLogin"
-                          mnemonicParsing="false"
-                          prefHeight="42.0" prefWidth="340.0"
+                  <Button onAction="#handleLogin"
+                          mnemonicParsing="false" prefHeight="42.0" prefWidth="340.0"
                           text="LOGIN"
-                          style="-fx-background-color: #0d3d6e;
-                                 -fx-text-fill: white;
-                                 -fx-font-weight: bold;
-                                 -fx-font-size: 14px;
-                                 -fx-border-color: rgba(255,255,255,0.25);
-                                 -fx-border-width: 1;
-                                 -fx-border-radius: 5;
-                                 -fx-background-radius: 5;
-                                 -fx-cursor: hand;">
-                     <font>
-                        <Font name="System Bold" size="14.0" />
-                     </font>
+                          style="-fx-background-color: #0d3d6e; -fx-text-fill: white;
+                                 -fx-font-weight: bold; -fx-font-size: 14px;
+                                 -fx-border-color: rgba(255,255,255,0.25); -fx-border-width: 1;
+                                 -fx-border-radius: 5; -fx-background-radius: 5; -fx-cursor: hand;">
+                     <font><Font name="System Bold" size="14.0" /></font>
                   </Button>
 
                   <Button onAction="#handleGoRegister"
-                          mnemonicParsing="false"
-                          prefHeight="31.0" prefWidth="208.0"
-                          text="Chưa có tài khoản ? Đăng kí"
-                          textFill="#f7e8e8"
+                          mnemonicParsing="false" prefHeight="31.0" prefWidth="208.0"
+                          text="Chưa có tài khoản ? Đăng kí" textFill="#f7e8e8"
                           style="-fx-background-color: transparent; -fx-font-style: italic;">
-                     <font>
-                        <Font name="System Bold" size="15.0" />
-                     </font>
+                     <font><Font name="System Bold" size="15.0" /></font>
                   </Button>
 
                </children>
