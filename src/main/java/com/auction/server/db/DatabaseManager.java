@@ -61,7 +61,7 @@ public class DatabaseManager {
                 ) ENGINE=InnoDB;
             """);
 
-            // 2. Bảng items (Đã fix lỗi ENUM)
+            // 2. Bảng items
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS items (
                     id VARCHAR(50) PRIMARY KEY,
@@ -82,7 +82,7 @@ public class DatabaseManager {
                     id VARCHAR(50) PRIMARY KEY,
                     item_id VARCHAR(50) NOT NULL,
                     seller_id VARCHAR(50) NOT NULL,
-                    status ENUM('OPEN', 'CLOSED', 'CANCELLED') DEFAULT 'OPEN',
+                    status ENUM('OPEN', 'CLOSED', 'CANCELLED', 'RUNNING', 'FINISHED', 'PAID') DEFAULT 'OPEN',
                     current_price DOUBLE NOT NULL,
                     start_time DATETIME NOT NULL,
                     end_time DATETIME NOT NULL,

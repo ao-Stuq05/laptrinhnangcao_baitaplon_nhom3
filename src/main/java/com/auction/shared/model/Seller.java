@@ -3,6 +3,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import com.auction.server.service.AuctionManager;
+
 import java.io.Serializable;
 
 public class Seller extends User implements Serializable {
@@ -31,10 +34,7 @@ public class Seller extends User implements Serializable {
         }
     }
 
-    /**
-     * Tạo và đăng ký một cuộc đấu giá cho vật phẩm.
-     * Lưu ý: Hãy đảm bảo file Auction.java đã có constructor Auction(Item, LocalDateTime)
-     */
+    
     public Auction createAuction(Item item, LocalDateTime endTime) {
         listItem(item);
         Auction auction = new Auction(item, endTime);
