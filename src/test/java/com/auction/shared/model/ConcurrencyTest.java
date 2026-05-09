@@ -1,7 +1,7 @@
 package com.auction.util;
 
 import com.auction.shared.model.*;
-import com.auction.shared.model.item.Electronics;
+import com.auction.shared.model.Item.Electronics;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.CountDownLatch;
