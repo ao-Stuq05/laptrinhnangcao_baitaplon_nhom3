@@ -127,24 +127,24 @@ public class ConcurrencyTest {
 
         System.out.println("\n── Kiểm tra logic ─────────────────────────");
 
-        // ✅ Kỳ vọng: CHỈ 1 bid thành công (không phải 2)
+        // Kỳ vọng: CHỈ 1 bid thành công (không phải 2)
         // Vì 2 bid cùng giá 11tr → cái thứ 2 phải bị từ chối (11tr không > 11tr)
         if (successCount.get() == 1 && failCount.get() == 1) {
-            System.out.println("✅ PASS: Đúng! Chỉ 1 bid thành công, 1 bid bị từ chối.");
+            System.out.println("PASS: Đúng! Chỉ 1 bid thành công, 1 bid bị từ chối.");
             System.out.println("   → synchronized đã ngăn lost update thành công.");
         } else if (successCount.get() == 2) {
-            System.out.println("❌ FAIL: Cả 2 bid đều thành công — BỊ LOST UPDATE!");
+            System.out.println("FAIL: Cả 2 bid đều thành công — BỊ LOST UPDATE!");
             System.out.println("   → Hãy kiểm tra lại synchronized trong placeBid().");
         } else {
             System.out.println("⚠️  Kết quả không như mong đợi: " + successCount.get()
                     + " thành công, " + failCount.get() + " thất bại");
         }
 
-        // ✅ Kỳ vọng: chỉ có đúng 1 BidTransaction được ghi
+        // Kỳ vọng: chỉ có đúng 1 BidTransaction được ghi
         if (auction.getBids().size() == 1) {
-            System.out.println("✅ PASS: Chỉ 1 BidTransaction được ghi vào lịch sử.");
+            System.out.println("PASS: Chỉ 1 BidTransaction được ghi vào lịch sử.");
         } else {
-            System.out.println("❌ FAIL: " + auction.getBids().size()
+            System.out.println("FAIL: " + auction.getBids().size()
                     + " BidTransaction — dữ liệu bị nhân đôi!");
         }
 
