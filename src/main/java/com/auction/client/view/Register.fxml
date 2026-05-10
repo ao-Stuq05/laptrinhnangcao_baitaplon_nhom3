@@ -11,7 +11,7 @@
 
         <ImageView fitHeight="560.0" fitWidth="820.0" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <image>
-                <Image url="@../../../../../resources/assets/background.jpg" />
+                <Image url="@/assets/background.jpg" />
             </image>
         </ImageView>
 

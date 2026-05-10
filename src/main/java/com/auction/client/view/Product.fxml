@@ -11,7 +11,7 @@
 
         <ImageView fitHeight="600.0" fitWidth="900.0" opacity="0.82" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <image>
-                <Image url="@../../../../../resources/assets/background.jpg" />
+                <Image url="@/assets/background.jpg" />
             </image>
         </ImageView>
 
@@ -68,7 +68,7 @@
                                         <VBox alignment="CENTER" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 10;" prefHeight="180.0">
                                             <ImageView fitHeight="150.0" fitWidth="280.0" pickOnBounds="true" preserveRatio="false">
                                                 <image>
-                                                    <Image url="@../../../../../resources/assets/img.png" />
+                                                    <Image url="@/assets/background.jpg" />
                                                 </image>
                                             </ImageView>
                                         </VBox>

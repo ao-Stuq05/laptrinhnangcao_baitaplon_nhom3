@@ -1,5 +1,6 @@
 package com.auction.client.network;
-
+import javafx.application.Platform;
+import com.auction.client.SceneManager;
 import com.auction.shared.model.Message;
 import java.io.*;
 import java.net.Socket;
@@ -56,10 +57,20 @@ public class ServerConnection {
         switch (msg.getType()) {
             case "LOGIN_SUCCESS":
                 System.out.println("Đăng nhập thành công rồi!");
-                // Ở đây em có thể gọi code để chuyển sang màn hình UI.fxml
+                Platform.runLater(() -> {
+                    SceneManager.switchScene("UI.fxml");
+                });
                 break;
             case "LOGIN_FAILED":
-                System.out.println("Sai tài khoản hoặc mật khẩu!");
+                Platform.runLater(() -> {
+                    // Nếu muốn hiện lỗi trên UI, cần lưu controller reference
+                    // Hiện tại tạm thời có thể để vậy hoặc show alert
+                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+                            javafx.scene.control.Alert.AlertType.ERROR,
+                            "Sai tài khoản hoặc mật khẩu!"
+                    );
+                    alert.showAndWait();
+                });
                 break;
             case "NEW_BID":
                 System.out.println("Có người vừa trả giá mới: " + msg.getPayload());

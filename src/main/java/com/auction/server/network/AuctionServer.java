@@ -59,9 +59,9 @@ public class AuctionServer {
 
                         // Demo test cứng
                         if ("admin".equals(loginData.getUsername())) {
-                            out.writeObject(new Message("SUCCESS", "Đăng nhập thành công!"));
+                            out.writeObject(new Message("LOGIN_SUCCESS", "Đăng nhập thành công!"));
                         } else {
-                            out.writeObject(new Message("ERROR", "Sai tài khoản!"));
+                            out.writeObject(new Message("LOGIN_FAILED", "Sai tài khoản!"));
                         }
                         out.flush();
                     }
