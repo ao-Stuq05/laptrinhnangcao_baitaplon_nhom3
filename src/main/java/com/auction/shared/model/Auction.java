@@ -112,36 +112,15 @@ public class Auction extends Entity implements Serializable {
         }
     }
 
-    public synchronized void placeBid(Bidder bidder, double amount) throws AuctionClosedException, InvalidBidException {
-
-        // Guard 1: kiểm tra xem trạng thái phiên có đang running không
-        if (this.status != AuctionStatus.RUNNING) { throws new AuctionClosedException(getId(), this.status); }
-
-        // Guard 2: kiểm tra xem số tiền có cao hơn giá hiện tại để cập nhật ko
-        if (amount <= this.currentPrice) { throws new InvalidBidException(amount, this.currentPrice); }
-
-        // Cập nhật trạng thái phiên theo giá mới nếu qua được hai guard trên
-        this.currentPrice  = amount;   // cập nhật giá mới
-        this.highestBidder = bidder;   // cập nhật người dẫn đầu
-
-        // Ghi lại lịch sử đặt giá mới của Auction và Bidder
-        BidTransaction tx = new BidTransaction(bidder, amount, getId()); // Tạo BidTransaction ghi lại lịch sử cập nhật giá mới
-        bidHistory.add(tx); // Lưu vào lịch sử của Auction
-        bidder.getBidHistory().add(tx); // Lưu vào lịch sử của Bidder (để Bidder xem lịch sử đặt giá của mình)
-
-        System.out.println("✓ " + bidder.getUsername() + " đặt giá " + amount + " | Phiên: " + item.getName());
-
-        // Thông báo cho Observer
-        notifyObservers(tx); // sau khi cập nhật xong thì thông báo cho GUI đầy đủ thông tin
-    }
-
-    // Observer Pattern
-    public void addObserver(AuctionObserver observer) {
-        // Kiểm tra null và trùng lặp trước khi thêm
-        if (observer != null && !observers.contains(observer)) {
-            observers.add(observer);
+    public synchronized void placeBid(Bidder bidder, double amount) {
+        if (status != AuctionStatus.OPEN && status != AuctionStatus.RUNNING) {
+            System.out.println("Lỗi: Phiên không mở!");
+            return;
         }
-    }
+        if (amount <= currentPrice) {
+            System.out.println("Lỗi: Giá phải cao hơn " + currentPrice);
+            return;
+        }
 
         currentPrice       = amount;
         highestBidder      = bidder;
