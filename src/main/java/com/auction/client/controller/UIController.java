@@ -21,8 +21,6 @@ public class UIController {
         SceneManager.switchScene("login.fxml");
     }
 
-    // THÊM MỚI: UI.fxml có onAction="#handleEnterRoom" ở 6 nút Vào phòng
-    // mà UIController chưa có hàm này → lỗi
     @FXML
     private void handleEnterRoom() {
         SceneManager.switchScene("Product.fxml");
@@ -31,5 +29,11 @@ public class UIController {
     @FXML
     private void handleGoMyAuction() {
         System.out.println("Chuyển sang màn hình đấu giá tôi");
+    }
+
+    // MỚI: chuyển sang màn hình đăng bán sản phẩm
+    @FXML
+    private void handleGoProductSeller() {
+        SceneManager.switchScene("ProductSeller.fxml");
     }
 }
