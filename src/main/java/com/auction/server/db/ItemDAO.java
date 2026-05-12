@@ -117,7 +117,7 @@ public class ItemDAO {
 
         // Tạo đúng subclass dựa trên category
         return switch (category) {
-            case "ELECTRONICS" -> new Electronics(id, name, description, basePrice, seller, 12); 
+            case "ELECTRONICS" -> new Electronics(id, name, description, basePrice, seller, 12); // default warranty
             case "ART" -> new Art(id, name, description, basePrice, seller, "Unknown", 2024);
             case "VEHICLE" -> new Vehicle(id, name, description, basePrice, seller, "Unknown", 0);
             default -> throw new SQLException("Category không hợp lệ: " + category);
