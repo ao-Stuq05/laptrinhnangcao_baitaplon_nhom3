@@ -24,7 +24,7 @@ public class RegisterController {
 
     @FXML
     public void initialize() {
-        cmbRole.getItems().addAll("BIDDER", "SELLER", "ADMIN");
+        cmbRole.getItems().addAll("BIDDER", "SELLER");
         cmbRole.setValue("BIDDER"); // mặc định chọn BIDDER
     }
 
