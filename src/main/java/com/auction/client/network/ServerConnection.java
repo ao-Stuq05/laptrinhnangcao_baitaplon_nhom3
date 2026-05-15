@@ -2,11 +2,15 @@ package com.auction.client.network;
 
 import javafx.application.Platform;
 import com.auction.client.SceneManager;
+import com.auction.shared.model.Auction;
+import com.auction.shared.model.BidTransaction;
 import com.auction.shared.model.Message;
 import com.auction.shared.model.User;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.List;
+import java.util.function.Consumer;
 
 public class ServerConnection {
     private static ServerConnection instance;
@@ -15,21 +19,23 @@ public class ServerConnection {
     private ObjectInputStream in;
     private boolean isRunning = false;
 
-    // Lưu user đang đăng nhập để dùng ở các màn hình khác
     private User currentUser;
+
+    // Callbacks
+    private Consumer<List<Auction>>  auctionListCallback;
+    private Consumer<BidTransaction> bidUpdateCallback;
 
     private ServerConnection() {}
 
     public static ServerConnection getInstance() {
-        if (instance == null) {
-            instance = new ServerConnection();
-        }
+        if (instance == null) instance = new ServerConnection();
         return instance;
     }
 
-    public User getCurrentUser() {
-        return currentUser;
-    }
+    public User getCurrentUser() { return currentUser; }
+
+    public void setAuctionListCallback(Consumer<List<Auction>> cb)  { this.auctionListCallback = cb; }
+    public void setBidUpdateCallback(Consumer<BidTransaction> cb)   { this.bidUpdateCallback   = cb; }
 
     public void connect(String host, int port) throws IOException {
         if (socket == null || socket.isClosed()) {
@@ -43,7 +49,7 @@ public class ServerConnection {
 
     private void startListening() {
         isRunning = true;
-        Thread listenerThread = new Thread(() -> {
+        Thread t = new Thread(() -> {
             try {
                 while (isRunning) {
                     Message response = (Message) in.readObject();
@@ -53,8 +59,8 @@ public class ServerConnection {
                 System.out.println("Lỗi luồng lắng nghe hoặc Server đã ngắt kết nối.");
             }
         });
-        listenerThread.setDaemon(true);
-        listenerThread.start();
+        t.setDaemon(true);
+        t.start();
     }
 
     private void handleServerResponse(Message msg) {
@@ -63,69 +69,97 @@ public class ServerConnection {
         switch (msg.getType()) {
 
             case "LOGIN_SUCCESS" -> {
-                currentUser = (User) msg.getPayload(); // Lưu user đang đăng nhập
-                System.out.println("Đăng nhập thành công: " + currentUser.getUsername()
-                        + " [" + currentUser.getRole() + "]");
+                currentUser = (User) msg.getPayload();
                 Platform.runLater(() -> SceneManager.switchScene("UI.fxml"));
             }
 
             case "LOGIN_FAILED" -> {
                 String reason = (String) msg.getPayload();
-                System.out.println("Đăng nhập thất bại: " + reason);
-                Platform.runLater(() -> {
-                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                            javafx.scene.control.Alert.AlertType.ERROR,
-                            reason != null ? reason : "Sai tài khoản hoặc mật khẩu!"
-                    );
-                    alert.setHeaderText("Đăng nhập thất bại");
-                    alert.showAndWait();
-                });
+                Platform.runLater(() -> showAlert("Đăng nhập thất bại",
+                        reason != null ? reason : "Sai tài khoản hoặc mật khẩu!",
+                        javafx.scene.control.Alert.AlertType.ERROR));
             }
 
             case "REGISTER_SUCCESS" -> {
                 User saved = (User) msg.getPayload();
-                System.out.println("Đăng ký thành công: " + saved.getUsername());
                 Platform.runLater(() -> {
-                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                            javafx.scene.control.Alert.AlertType.INFORMATION,
-                            "Tài khoản '" + saved.getUsername() + "' đã được tạo thành công!"
-                    );
-                    alert.setHeaderText("Đăng ký thành công");
-                    alert.showAndWait();
-                    SceneManager.switchScene("login.fxml"); // Chuyển về màn hình đăng nhập
+                    showAlert("Đăng ký thành công",
+                            "Tài khoản '" + saved.getUsername() + "' đã được tạo!",
+                            javafx.scene.control.Alert.AlertType.INFORMATION);
+                    SceneManager.switchScene("login.fxml");
                 });
             }
 
             case "REGISTER_FAILED" -> {
                 String reason = (String) msg.getPayload();
-                System.out.println("Đăng ký thất bại: " + reason);
+                Platform.runLater(() -> showAlert("Đăng ký thất bại",
+                        reason != null ? reason : "Vui lòng thử lại!",
+                        javafx.scene.control.Alert.AlertType.ERROR));
+            }
+
+            case "CREATE_AUCTION_SUCCESS" -> {
+                Auction a = (Auction) msg.getPayload();
                 Platform.runLater(() -> {
-                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                            javafx.scene.control.Alert.AlertType.ERROR,
-                            reason != null ? reason : "Đăng ký thất bại, vui lòng thử lại!"
-                    );
-                    alert.setHeaderText("Đăng ký thất bại");
-                    alert.showAndWait();
+                    showAlert("Đăng bán thành công",
+                            "Sản phẩm \"" + a.getItem().getName() + "\" đã được đăng!",
+                            javafx.scene.control.Alert.AlertType.INFORMATION);
+                    SceneManager.switchScene("UI.fxml");
                 });
             }
 
-            case "NEW_BID" -> {
-                System.out.println("Có người vừa trả giá mới: " + msg.getPayload());
+            case "CREATE_AUCTION_FAILED" -> {
+                String reason = (String) msg.getPayload();
+                Platform.runLater(() -> showAlert("Đăng bán thất bại",
+                        reason != null ? reason : "Vui lòng thử lại!",
+                        javafx.scene.control.Alert.AlertType.ERROR));
             }
 
-            default -> System.out.println("[Client] Không xử lý loại tin: " + msg.getType());
+            case "GET_AUCTIONS_SUCCESS" -> {
+                @SuppressWarnings("unchecked")
+                List<Auction> auctions = (List<Auction>) msg.getPayload();
+                if (auctionListCallback != null) auctionListCallback.accept(auctions);
+            }
+
+            case "GET_AUCTIONS_FAILED" ->
+                    System.out.println("Lấy danh sách thất bại: " + msg.getPayload());
+
+            // ✅ Nhận bid mới realtime — cập nhật ProductController nếu đang xem đúng phiên
+            case "NEW_BID" -> {
+                BidTransaction tx = (BidTransaction) msg.getPayload();
+                if (bidUpdateCallback != null) bidUpdateCallback.accept(tx);
+            }
+
+            // ✅ Kết quả đặt giá của chính mình
+            case "PLACE_BID_SUCCESS" -> {
+                BidTransaction tx = (BidTransaction) msg.getPayload();
+                System.out.println("Đặt giá thành công: " + tx.getBidAmount());
+                if (bidUpdateCallback != null) bidUpdateCallback.accept(tx);
+            }
+
+            case "PLACE_BID_FAILED" -> {
+                String reason = (String) msg.getPayload();
+                Platform.runLater(() -> showAlert("Đặt giá thất bại",
+                        reason != null ? reason : "Vui lòng thử lại!",
+                        javafx.scene.control.Alert.AlertType.ERROR));
+            }
+
+            default -> System.out.println("[Client] Không xử lý: " + msg.getType());
         }
     }
 
     public void sendMessage(Message msg) throws IOException {
-        if (out != null) {
-            out.writeObject(msg);
-            out.flush();
-        }
+        if (out != null) { out.writeObject(msg); out.flush(); }
     }
 
     public void close() throws IOException {
         isRunning = false;
         if (socket != null) socket.close();
+    }
+
+    private void showAlert(String header, String content,
+                           javafx.scene.control.Alert.AlertType type) {
+        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(type, content);
+        alert.setHeaderText(header);
+        alert.showAndWait();
     }
 }

@@ -10,13 +10,33 @@ public class SceneManager {
 
     private static Stage primaryStage;
 
-    // Gọi 1 lần trong Main.java để đăng ký Stage
+    // ✅ BỔ SUNG: lưu data muốn truyền sang màn hình tiếp theo
+    private static Object pendingData;
+
     public static void setStage(Stage stage) {
         primaryStage = stage;
     }
 
-    // Chuyển màn hình — truyền tên file FXML
+    // Chuyển màn hình thông thường (không có data)
     public static void switchScene(String fxmlFile) {
+        pendingData = null;
+        loadScene(fxmlFile);
+    }
+
+    // ✅ BỔ SUNG: Chuyển màn hình kèm data (auction, user, ...)
+    public static void switchScene(String fxmlFile, Object data) {
+        pendingData = data;
+        loadScene(fxmlFile);
+    }
+
+    // ✅ BỔ SUNG: Controller gọi hàm này trong initialize() để nhận data
+    public static Object getAndClearData() {
+        Object data = pendingData;
+        pendingData = null;
+        return data;
+    }
+
+    private static void loadScene(String fxmlFile) {
         try {
             FXMLLoader loader = new FXMLLoader(
                     SceneManager.class.getResource(
@@ -33,7 +53,6 @@ public class SceneManager {
         }
     }
 
-    // Dùng khi cần lấy Controller sau khi load (truyền data)
     public static FXMLLoader getLoader(String fxmlFile) {
         return new FXMLLoader(
                 SceneManager.class.getResource(

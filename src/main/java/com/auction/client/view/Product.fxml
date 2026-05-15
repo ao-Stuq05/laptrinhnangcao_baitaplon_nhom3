@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
@@ -41,7 +40,7 @@
 
                         <VBox style="-fx-padding: 12 8 16 8; -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 1 0 0 0;">
                             <children>
-                                <Button maxWidth="Infinity" mnemonicParsing="false" onAction="#handleLogout" text="ĐĂNG XUẤT" style="-fx-background-color: rgba(180,30,30,0.55); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 10 14; -fx-border-color: rgba(255,255,255,0.15); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;" />
+                                <Button maxWidth="Infinity" mnemonicParsing="false" onAction="#handleLogout" style="-fx-background-color: rgba(180,30,30,0.55); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 10 14; -fx-border-color: rgba(255,255,255,0.15); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;" text="ĐĂNG XUẤT" />
                             </children>
                         </VBox>
                     </children>
@@ -52,7 +51,7 @@
 
                         <HBox alignment="CENTER_LEFT" spacing="15.0">
                             <children>
-                                <Button mnemonicParsing="false" style="-fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: white; -fx-border-color: rgba(255,255,255,0.20); -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand; -fx-padding: 6 12;" onAction="#handleGoBack" text="← Quay lại" />
+                                <Button mnemonicParsing="false" onAction="#handleGoBack" style="-fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: white; -fx-border-color: rgba(255,255,255,0.20); -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand; -fx-padding: 6 12;" text="← Quay lại" />
                                 <Label text="CHI TIẾT SẢN PHẨM" textFill="#e2ff00">
                                     <font><Font name="System Bold" size="18.0" /></font>
                                 </Label>
@@ -62,18 +61,18 @@
                         <HBox spacing="15.0" VBox.vgrow="ALWAYS">
                             <children>
 
-                                <VBox spacing="12.0" HBox.hgrow="ALWAYS" prefWidth="350.0">
+                                <VBox prefWidth="350.0" spacing="12.0" HBox.hgrow="ALWAYS">
                                     <children>
 
-                                        <VBox alignment="CENTER" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 10;" prefHeight="180.0">
-                                            <ImageView fitHeight="150.0" fitWidth="280.0" pickOnBounds="true" preserveRatio="false">
+                                        <VBox alignment="CENTER" prefHeight="180.0" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 10;">
+                                            <ImageView fx:id="imgProduct" fitHeight="150.0" fitWidth="280.0" pickOnBounds="true" preserveRatio="true">
                                                 <image>
                                                     <Image url="@/assets/background.jpg" />
                                                 </image>
                                             </ImageView>
                                         </VBox>
 
-                                        <GridPane hgap="10.0" vgap="12.0" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 15;">
+                                        <GridPane hgap="10.0" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 15;" vgap="12.0">
                                             <columnConstraints>
                                                 <ColumnConstraints hgrow="SOMETIMES" minWidth="80.0" />
                                                 <ColumnConstraints halignment="RIGHT" hgrow="ALWAYS" />
@@ -115,10 +114,10 @@
                                     </children>
                                 </VBox>
 
-                                <VBox spacing="12.0" HBox.hgrow="ALWAYS" prefWidth="350.0">
+                                <VBox prefWidth="350.0" spacing="12.0" HBox.hgrow="ALWAYS">
                                     <children>
 
-                                        <VBox spacing="10.0" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 15;">
+                                        <VBox prefHeight="397.0" prefWidth="346.0" spacing="10.0" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 15;">
                                             <Label text="ĐẶT GIÁ ĐẤU" textFill="WHITE">
                                                 <font><Font name="System Bold" size="15.0" /></font>
                                             </Label>
@@ -129,34 +128,10 @@
                                             </VBox>
 
                                             <HBox spacing="8.0">
-                                                <TextField fx:id="txtBidAmount" promptText="Nhập mức giá..." style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 4; -fx-font-size: 13px;" HBox.hgrow="ALWAYS" prefHeight="35.0" />
-                                                <Button style="-fx-background-color: #0d3d6e; -fx-text-fill: white; -fx-font-weight: bold; -fx-border-color: rgba(255,255,255,0.25); -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand;" onAction="#handleBid" text="ĐẤU GIÁ" prefHeight="35.0" />
+                                                <TextField fx:id="txtBidAmount" prefHeight="35.0" promptText="Nhập mức giá..." style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 4; -fx-font-size: 13px;" HBox.hgrow="ALWAYS" />
+                                                <Button onAction="#handleBid" prefHeight="35.0" style="-fx-background-color: #0d3d6e; -fx-text-fill: white; -fx-font-weight: bold; -fx-border-color: rgba(255,255,255,0.25); -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand;" text="ĐẤU GIÁ" />
                                             </HBox>
-                                            <Label fx:id="lblBidError" visible="false" style="-fx-text-fill: #ff6b6b; -fx-font-size: 12px;" />
-                                        </VBox>
-
-                                        <VBox spacing="10.0" VBox.vgrow="ALWAYS" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 15;">
-                                            <Label text="LỊCH SỬ ĐẤU GIÁ (Top 3)" textFill="WHITE">
-                                                <font><Font name="System Bold" size="15.0" /></font>
-                                            </Label>
-
-                                            <VBox spacing="8.0">
-                                                <HBox alignment="CENTER_LEFT" style="-fx-border-color: transparent transparent rgba(255,255,255,0.1) transparent; -fx-border-width: 1; -fx-padding: 5 0;">
-                                                    <Label text="1. user123" textFill="#eab308"><font><Font name="System Bold" size="13.0" /></font></Label>
-                                                    <Region HBox.hgrow="ALWAYS" />
-                                                    <Label text="62,000,000đ" textFill="#00ff88"><font><Font name="System Bold" size="13.0" /></font></Label>
-                                                </HBox>
-                                                <HBox alignment="CENTER_LEFT" style="-fx-border-color: transparent transparent rgba(255,255,255,0.1) transparent; -fx-border-width: 1; -fx-padding: 5 0;">
-                                                    <Label text="2. user456" textFill="WHITE"><font><Font size="13.0" /></font></Label>
-                                                    <Region HBox.hgrow="ALWAYS" />
-                                                    <Label text="60,000,000đ" textFill="#00ff88"><font><Font name="System Bold" size="13.0" /></font></Label>
-                                                </HBox>
-                                                <HBox alignment="CENTER_LEFT" style="-fx-padding: 5 0;">
-                                                    <Label text="3. user789" textFill="WHITE"><font><Font size="13.0" /></font></Label>
-                                                    <Region HBox.hgrow="ALWAYS" />
-                                                    <Label text="55,000,000đ" textFill="#00ff88"><font><Font name="System Bold" size="13.0" /></font></Label>
-                                                </HBox>
-                                            </VBox>
+                                            <Label fx:id="lblBidError" style="-fx-text-fill: #ff6b6b; -fx-font-size: 12px;" visible="false" />
                                         </VBox>
 
                                     </children>

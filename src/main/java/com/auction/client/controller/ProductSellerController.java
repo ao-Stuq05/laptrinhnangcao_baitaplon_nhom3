@@ -34,7 +34,6 @@ public class ProductSellerController {
 
     @FXML
     public void initialize() {
-        // Danh mục
         cbCategory.setItems(FXCollections.observableArrayList(
                 "Đồng hồ & Trang sức",
                 "Điện tử",
@@ -44,14 +43,12 @@ public class ProductSellerController {
                 "Khác"
         ));
 
-        // Tình trạng
         cbCondition.setItems(FXCollections.observableArrayList(
                 "Mới 100%",
                 "Đã qua sử dụng",
                 "Cổ vật / Cũ"
         ));
 
-        // Ngày mặc định: hôm nay → ngày mai
         dpStartDate.setValue(LocalDate.now());
         dpEndDate.setValue(LocalDate.now().plusDays(1));
     }
@@ -124,7 +121,7 @@ public class ProductSellerController {
 
         hideError();
 
-        // --- Gửi lên server ---
+        // --- Đóng gói payload và gửi lên server ---
         try {
             HashMap<String, Object> payload = new HashMap<>();
             payload.put("name",        name);
@@ -142,13 +139,15 @@ public class ProductSellerController {
             ServerConnection.getInstance().sendMessage(msg);
             System.out.println(">>> Đã gửi yêu cầu ĐĂNG BÁN lên Server!");
 
+            // ✅ KHÔNG chuyển màn hình ở đây
+            // Việc chuyển màn hình sẽ do ServerConnection.handleServerResponse()
+            // thực hiện sau khi nhận CREATE_AUCTION_SUCCESS từ server
+
         } catch (Exception e) {
+            showError("Không thể kết nối tới server!");
             System.out.println("⚠ Không thể gửi lên Server: " + e.getMessage());
             e.printStackTrace();
         }
-
-        // Quay về màn hình đấu giá tôi sau khi đăng
-        SceneManager.switchScene("UI.fxml");
     }
 
     // ── Điều hướng ─────────────────────────────────────────────────────────────
