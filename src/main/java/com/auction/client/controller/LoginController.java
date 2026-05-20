@@ -42,7 +42,7 @@ public class LoginController {
             System.out.println(">>> Đã bắn gói tin Đăng nhập qua mạng lên Server!");
 
         } catch (Exception e) {
-            showError("Lỗi kết nối mạng: Không gửi được lên Server!");
+            showError("Lỗi kết nối mạng: Không gửi được lên Server!!");
             e.printStackTrace();
         }
     }
