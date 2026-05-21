@@ -22,8 +22,11 @@ public class ServerConnection {
     private User currentUser;
 
     // Callbacks
-    private Consumer<List<Auction>>  auctionListCallback;
-    private Consumer<BidTransaction> bidUpdateCallback;
+    private Consumer<List<Auction>>        auctionListCallback;
+    private Consumer<BidTransaction>       bidUpdateCallback;
+    private Consumer<Double>               topUpCallback;
+    private Consumer<List<Auction>>        myAuctionCallback;
+    private Consumer<List<BidTransaction>> myBidCallback;
 
     private ServerConnection() {}
 
@@ -34,8 +37,11 @@ public class ServerConnection {
 
     public User getCurrentUser() { return currentUser; }
 
-    public void setAuctionListCallback(Consumer<List<Auction>> cb)  { this.auctionListCallback = cb; }
-    public void setBidUpdateCallback(Consumer<BidTransaction> cb)   { this.bidUpdateCallback   = cb; }
+    public void setAuctionListCallback(Consumer<List<Auction>> cb)         { this.auctionListCallback = cb; }
+    public void setBidUpdateCallback(Consumer<BidTransaction> cb)          { this.bidUpdateCallback   = cb; }
+    public void setTopUpCallback(Consumer<Double> cb)                      { this.topUpCallback       = cb; }
+    public void setMyAuctionCallback(Consumer<List<Auction>> cb)           { this.myAuctionCallback   = cb; }
+    public void setMyBidCallback(Consumer<List<BidTransaction>> cb)        { this.myBidCallback       = cb; }
 
     public void connect(String host, int port) throws IOException {
         if (socket == null || socket.isClosed()) {
@@ -123,13 +129,13 @@ public class ServerConnection {
             case "GET_AUCTIONS_FAILED" ->
                     System.out.println("Lấy danh sách thất bại: " + msg.getPayload());
 
-            // ✅ Nhận bid mới realtime — cập nhật ProductController nếu đang xem đúng phiên
+            // Nhận bid mới realtime
             case "NEW_BID" -> {
                 BidTransaction tx = (BidTransaction) msg.getPayload();
                 if (bidUpdateCallback != null) bidUpdateCallback.accept(tx);
             }
 
-            // ✅ Kết quả đặt giá của chính mình
+            // Kết quả đặt giá của chính mình
             case "PLACE_BID_SUCCESS" -> {
                 BidTransaction tx = (BidTransaction) msg.getPayload();
                 System.out.println("Đặt giá thành công: " + tx.getBidAmount());
@@ -139,6 +145,49 @@ public class ServerConnection {
             case "PLACE_BID_FAILED" -> {
                 String reason = (String) msg.getPayload();
                 Platform.runLater(() -> showAlert("Đặt giá thất bại",
+                        reason != null ? reason : "Vui lòng thử lại!",
+                        javafx.scene.control.Alert.AlertType.ERROR));
+            }
+
+            // ── MỚI: NẠP TIỀN ────────────────────────────────────────────
+            case "TOP_UP_SUCCESS" -> {
+                Double newBalance = (Double) msg.getPayload();
+                if (topUpCallback != null)
+                    Platform.runLater(() -> topUpCallback.accept(newBalance));
+            }
+
+            case "TOP_UP_FAILED" -> {
+                String reason = (String) msg.getPayload();
+                Platform.runLater(() -> showAlert("Nạp tiền thất bại",
+                        reason != null ? reason : "Vui lòng thử lại!",
+                        javafx.scene.control.Alert.AlertType.ERROR));
+            }
+
+            // ── MỚI: LỊCH SỬ ĐẤU GIÁ CỦA TÔI ───────────────────────────
+            case "GET_MY_AUCTIONS_SUCCESS" -> {
+                @SuppressWarnings("unchecked")
+                List<Auction> auctions = (List<Auction>) msg.getPayload();
+                if (myAuctionCallback != null) myAuctionCallback.accept(auctions);
+            }
+
+            case "GET_MY_BIDS_SUCCESS" -> {
+                @SuppressWarnings("unchecked")
+                List<BidTransaction> bids = (List<BidTransaction>) msg.getPayload();
+                if (myBidCallback != null) myBidCallback.accept(bids);
+            }
+
+            // ── MỚI: CẬP NHẬT THÔNG TIN CÁ NHÂN ────────────────────────
+            case "UPDATE_PROFILE_SUCCESS" -> {
+                User updated = (User) msg.getPayload();
+                currentUser = updated;
+                Platform.runLater(() -> showAlert("Cập nhật thành công",
+                        "Thông tin cá nhân đã được lưu!",
+                        javafx.scene.control.Alert.AlertType.INFORMATION));
+            }
+
+            case "UPDATE_PROFILE_FAILED" -> {
+                String reason = (String) msg.getPayload();
+                Platform.runLater(() -> showAlert("Cập nhật thất bại",
                         reason != null ? reason : "Vui lòng thử lại!",
                         javafx.scene.control.Alert.AlertType.ERROR));
             }

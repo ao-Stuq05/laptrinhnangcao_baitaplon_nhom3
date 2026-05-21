@@ -27,10 +27,8 @@ public class UIController {
         cbFilter.getItems().addAll("Tất cả", "Điện tử", "Nghệ thuật", "Xe cộ", "Đồng hồ & Trang sức");
         cbFilter.setValue("Tất cả");
 
-        // Đăng ký callback nhận danh sách auction từ server
         ServerConnection.getInstance().setAuctionListCallback(this::displayAuctions);
 
-        // Gửi yêu cầu lấy danh sách
         try {
             ServerConnection.getInstance().sendMessage(new Message("GET_AUCTIONS", null));
         } catch (Exception e) {
@@ -38,7 +36,6 @@ public class UIController {
         }
     }
 
-    // Đổ danh sách auction vào GridPane dưới dạng card
     public void displayAuctions(List<Auction> auctions) {
         Platform.runLater(() -> {
             gridAuctions.getChildren().clear();
@@ -93,10 +90,7 @@ public class UIController {
                 "-fx-border-width: 1; -fx-border-radius: 5;" +
                 "-fx-background-radius: 5; -fx-cursor: hand;");
 
-        // ✅ Truyền auction được chọn sang ProductController qua SceneManager
-        btnEnter.setOnAction(e ->
-                SceneManager.switchScene("Product.fxml", auction)
-        );
+        btnEnter.setOnAction(e -> SceneManager.switchScene("Product.fxml", auction));
 
         card.getChildren().addAll(lblName, lblPrice, lblTime, lblCategory, btnEnter);
         return card;
@@ -114,5 +108,10 @@ public class UIController {
 
     @FXML private void handleGoProductSeller() {
         SceneManager.switchScene("ProductSeller.fxml");
+    }
+
+    // MỚI: Chuyển sang màn hình Hồ sơ cá nhân
+    @FXML private void handleGoProfile() {
+        SceneManager.switchScene("Profile.fxml");
     }
 }

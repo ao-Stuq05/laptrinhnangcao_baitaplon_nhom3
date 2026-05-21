@@ -13,8 +13,7 @@ public class BidTransactionDAO {
     private final UserDAO userDAO;
 
     public BidTransactionDAO() {
-        // Lấy connection từ DatabaseManager (Singleton)
-        this.conn = DatabaseManager.getInstance().getConnection();
+        this.conn    = DatabaseManager.getInstance().getConnection();
         this.userDAO = new UserDAO();
     }
 
@@ -24,7 +23,6 @@ public class BidTransactionDAO {
             INSERT INTO bid_transactions (id, auction_id, bidder_id, bid_amount, is_winning, timestamp)
             VALUES (?, ?, ?, ?, ?, ?)
         """;
-        // PreparedStatement ngăn SQL Injection
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, bid.getId());
             ps.setString(2, bid.getAuctionId());
@@ -48,14 +46,41 @@ public class BidTransactionDAO {
             ps.setString(1, auctionId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                String id = rs.getString("id");
-                String bidderId = rs.getString("bidder_id");
-                double bidAmount = rs.getDouble("bid_amount");
+                String id         = rs.getString("id");
+                String bidderId   = rs.getString("bidder_id");
+                double bidAmount  = rs.getDouble("bid_amount");
                 boolean isWinning = rs.getInt("is_winning") == 1;
                 LocalDateTime timestamp = rs.getTimestamp("timestamp").toLocalDateTime();
 
                 Bidder bidder = (Bidder) userDAO.findById(bidderId)
-                    .orElseThrow(() -> new SQLException("Không tìm thấy bidder: " + bidderId));
+                        .orElseThrow(() -> new SQLException("Không tìm thấy bidder: " + bidderId));
+
+                results.add(new BidTransaction(id, bidder, bidAmount, auctionId, timestamp, isWinning));
+            }
+        }
+        return results;
+    }
+
+    /** MỚI: Lấy tất cả bid của 1 Bidder, sắp xếp mới nhất trước — dùng cho tab "Lịch sử mua" */
+    public List<BidTransaction> findByBidder(String bidderId) throws SQLException {
+        String sql = """
+            SELECT * FROM bid_transactions
+            WHERE bidder_id = ?
+            ORDER BY timestamp DESC
+        """;
+        List<BidTransaction> results = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, bidderId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                String id         = rs.getString("id");
+                String auctionId  = rs.getString("auction_id");
+                double bidAmount  = rs.getDouble("bid_amount");
+                boolean isWinning = rs.getInt("is_winning") == 1;
+                LocalDateTime timestamp = rs.getTimestamp("timestamp").toLocalDateTime();
+
+                Bidder bidder = (Bidder) userDAO.findById(bidderId)
+                        .orElseThrow(() -> new SQLException("Không tìm thấy bidder: " + bidderId));
 
                 results.add(new BidTransaction(id, bidder, bidAmount, auctionId, timestamp, isWinning));
             }

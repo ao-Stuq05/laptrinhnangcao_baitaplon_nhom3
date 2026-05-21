@@ -1,7 +1,9 @@
 package com.auction.server.network;
 
 import com.auction.server.db.AuctionDAO;
+import com.auction.server.db.BidTransactionDAO;
 import com.auction.server.db.ItemDAO;
+import com.auction.server.db.UserDAO;
 import com.auction.server.service.AuctionManager;
 import com.auction.server.service.UserService;
 import com.auction.shared.model.*;
@@ -10,6 +12,7 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -39,8 +42,10 @@ public class AuctionServer {
         private ObjectInputStream in;
         private User currentUser;
 
-        private final AuctionDAO auctionDAO = new AuctionDAO();
-        private final ItemDAO    itemDAO    = new ItemDAO();
+        private final AuctionDAO        auctionDAO        = new AuctionDAO();
+        private final ItemDAO           itemDAO           = new ItemDAO();
+        private final UserDAO           userDAO           = new UserDAO();
+        private final BidTransactionDAO bidTransactionDAO = new BidTransactionDAO();
 
         public ClientHandler(Socket socket) { this.clientSocket = socket; }
 
@@ -62,7 +67,7 @@ public class AuctionServer {
                             try {
                                 User loggedIn = userService.login(
                                         loginData.getUsername(), loginData.getPasswordHash());
-                                currentUser = loggedIn; // ✅ lưu lại
+                                currentUser = loggedIn;
                                 out.writeObject(new Message("LOGIN_SUCCESS", loggedIn));
                                 System.out.println("[Server] Login OK: " + loggedIn.getUsername());
                             } catch (IllegalArgumentException e) {
@@ -137,7 +142,7 @@ public class AuctionServer {
                             out.flush();
                         }
 
-                        // ── LẤY DANH SÁCH PHIÊN ĐẤU GIÁ ✅ MỚI ───────────────
+                        // ── LẤY DANH SÁCH PHIÊN ĐẤU GIÁ ──────────────────────
                         case "GET_AUCTIONS" -> {
                             try {
                                 List<Auction> auctions = auctionDAO.findActive();
@@ -145,6 +150,99 @@ public class AuctionServer {
                                 System.out.println("[Server] GET_AUCTIONS OK: " + auctions.size() + " phiên");
                             } catch (Exception e) {
                                 out.writeObject(new Message("GET_AUCTIONS_FAILED", e.getMessage()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── MỚI: NẠP TIỀN ─────────────────────────────────────
+                        case "TOP_UP" -> {
+                            if (!(currentUser instanceof Bidder)) {
+                                out.writeObject(new Message("TOP_UP_FAILED",
+                                        "Chỉ tài khoản Bidder mới nạp tiền được!"));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                @SuppressWarnings("unchecked")
+                                HashMap<String, Object> p = (HashMap<String, Object>) request.getPayload();
+                                double amount = (double) p.get("amount");
+
+                                Bidder bidder = (Bidder) currentUser;
+                                double newBal = bidder.getBalance() + amount;
+                                userDAO.updateBalance(bidder.getId(), newBal);
+                                bidder.setBalance(newBal);
+
+                                out.writeObject(new Message("TOP_UP_SUCCESS", newBal));
+                                System.out.println("[Server] TOP_UP OK: " + bidder.getUsername()
+                                        + " | +" + amount + " | Số dư mới: " + newBal);
+                            } catch (Exception e) {
+                                out.writeObject(new Message("TOP_UP_FAILED", "Lỗi server: " + e.getMessage()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── MỚI: LẤY PHIÊN ĐẤU GIÁ CỦA SELLER ───────────────
+                        case "GET_MY_AUCTIONS" -> {
+                            try {
+                                List<Auction> list;
+                                if (currentUser instanceof Seller seller) {
+                                    list = auctionDAO.findBySeller(seller.getId());
+                                } else {
+                                    list = new ArrayList<>();
+                                }
+                                out.writeObject(new Message("GET_MY_AUCTIONS_SUCCESS",
+                                        (java.io.Serializable) list));
+                                System.out.println("[Server] GET_MY_AUCTIONS OK: " + list.size() + " phiên");
+                            } catch (Exception e) {
+                                out.writeObject(new Message("GET_MY_AUCTIONS_SUCCESS",
+                                        new ArrayList<>()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── MỚI: LẤY LỊCH SỬ BID CỦA BIDDER ─────────────────
+                        case "GET_MY_BIDS" -> {
+                            try {
+                                List<BidTransaction> list;
+                                if (currentUser instanceof Bidder bidder) {
+                                    list = bidTransactionDAO.findByBidder(bidder.getId());
+                                } else {
+                                    list = new ArrayList<>();
+                                }
+                                out.writeObject(new Message("GET_MY_BIDS_SUCCESS",
+                                        (java.io.Serializable) list));
+                                System.out.println("[Server] GET_MY_BIDS OK: " + list.size() + " giao dịch");
+                            } catch (Exception e) {
+                                out.writeObject(new Message("GET_MY_BIDS_SUCCESS",
+                                        new ArrayList<>()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── MỚI: CẬP NHẬT THÔNG TIN CÁ NHÂN ──────────────────
+                        case "UPDATE_PROFILE" -> {
+                            if (currentUser == null) {
+                                out.writeObject(new Message("UPDATE_PROFILE_FAILED", "Chưa đăng nhập!"));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                @SuppressWarnings("unchecked")
+                                HashMap<String, Object> p = (HashMap<String, Object>) request.getPayload();
+                                String newEmail = (String) p.get("email");
+                                String newPass  = (String) p.get("password"); // null nếu không đổi
+
+                                userDAO.updateProfile(currentUser.getId(), newEmail, newPass);
+                                currentUser.setEmail(newEmail);
+
+                                out.writeObject(new Message("UPDATE_PROFILE_SUCCESS", currentUser));
+                                System.out.println("[Server] UPDATE_PROFILE OK: " + currentUser.getUsername());
+                            } catch (Exception e) {
+                                out.writeObject(new Message("UPDATE_PROFILE_FAILED", "Lỗi: " + e.getMessage()));
                                 e.printStackTrace();
                             }
                             out.flush();
