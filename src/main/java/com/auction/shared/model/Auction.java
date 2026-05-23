@@ -181,5 +181,13 @@ public class Auction extends Entity implements Serializable {
 
     public void setStatus(AuctionStatus status)   { this.status = status; }
     public void setWinner(Bidder winner)           { this.winner = winner; }
+    /** Chỉ cập nhật currentPrice (client dùng để tránh tạo BidTransaction duplicate) */
+    public void setCurrentPriceOnly(double price)  { this.currentPrice = price; }
+
+    /** Inject bid từ DB vào bidHistory mà không trigger observer hay kiểm tra giá */
+    public void injectBid(BidTransaction tx) {
+        if (bidHistory == null) bidHistory = new java.util.concurrent.CopyOnWriteArrayList<>();
+        bidHistory.add(tx);
+    }
     public void setEndTime(LocalDateTime endTime)  { this.endTime = endTime; }
 }

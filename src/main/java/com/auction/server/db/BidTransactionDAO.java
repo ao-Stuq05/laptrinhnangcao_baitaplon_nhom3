@@ -1,7 +1,9 @@
 package com.auction.server.db;
 
+import com.auction.shared.model.Auction;
 import com.auction.shared.model.BidTransaction;
 import com.auction.shared.model.Bidder;
+
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -61,7 +63,7 @@ public class BidTransactionDAO {
         return results;
     }
 
-    /** MỚI: Lấy tất cả bid của 1 Bidder, sắp xếp mới nhất trước — dùng cho tab "Lịch sử mua" */
+    /** Lấy tất cả bid của 1 Bidder, sắp xếp mới nhất trước */
     public List<BidTransaction> findByBidder(String bidderId) throws SQLException {
         String sql = """
             SELECT * FROM bid_transactions
@@ -83,6 +85,48 @@ public class BidTransactionDAO {
                         .orElseThrow(() -> new SQLException("Không tìm thấy bidder: " + bidderId));
 
                 results.add(new BidTransaction(id, bidder, bidAmount, auctionId, timestamp, isWinning));
+            }
+        }
+        return results;
+    }
+
+    /**
+     * Lấy lịch sử bid của Bidder kèm tên sản phẩm (JOIN với auctions + items).
+     * Dùng cho màn hình Profile → tab "Lịch sử mua".
+     * auctionId trong BidTransaction sẽ được thay bằng tên sản phẩm thực tế
+     * thông qua một BidTransaction đặc biệt chứa itemName trong auctionId field.
+     */
+    public List<BidTransaction> findByBidderWithItem(String bidderId, AuctionDAO auctionDAO) throws SQLException {
+        String sql = """
+            SELECT bt.id, bt.auction_id, bt.bid_amount, bt.is_winning, bt.timestamp,
+                   i.name AS item_name, a.current_price AS final_price, a.status AS auction_status
+            FROM bid_transactions bt
+            LEFT JOIN auctions a ON bt.auction_id = a.id
+            LEFT JOIN items i ON a.item_id = i.id
+            WHERE bt.bidder_id = ?
+            ORDER BY bt.timestamp DESC
+        """;
+        List<BidTransaction> results = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, bidderId);
+            ResultSet rs = ps.executeQuery();
+
+            Bidder bidder = (Bidder) userDAO.findById(bidderId)
+                    .orElseThrow(() -> new SQLException("Không tìm thấy bidder: " + bidderId));
+
+            while (rs.next()) {
+                String id         = rs.getString("id");
+                String auctionId  = rs.getString("auction_id");
+                double bidAmount  = rs.getDouble("bid_amount");
+                boolean isWinning = rs.getInt("is_winning") == 1;
+                LocalDateTime timestamp = rs.getTimestamp("timestamp").toLocalDateTime();
+
+                // Dùng tên sản phẩm làm "label" để hiển thị trong UI
+                String itemName = rs.getString("item_name");
+                String displayId = (itemName != null && !itemName.isEmpty())
+                        ? itemName : auctionId;
+
+                results.add(new BidTransaction(id, bidder, bidAmount, displayId, timestamp, isWinning));
             }
         }
         return results;

@@ -15,11 +15,16 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class AuctionServer {
     private int port;
     private final UserService userService = new UserService();
+
+    // Giữ danh sách tất cả ClientHandler để broadcast bid mới realtime
+    private static final List<ClientHandler> connectedClients = new CopyOnWriteArrayList<>();
 
     public AuctionServer(int port) { this.port = port; }
 
@@ -29,10 +34,24 @@ public class AuctionServer {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("[Mạng] Client mới: " + clientSocket.getInetAddress());
-                new ClientHandler(clientSocket).start();
+                ClientHandler handler = new ClientHandler(clientSocket);
+                connectedClients.add(handler);
+                handler.start();
             }
         } catch (IOException e) {
             System.err.println("Lỗi khởi động Server: " + e.getMessage());
+        }
+    }
+
+    /** Broadcast 1 message tới tất cả client đang kết nối (trừ sender nếu cần) */
+    private static void broadcast(Message msg, ClientHandler sender) {
+        for (ClientHandler c : connectedClients) {
+            if (c == sender) continue;
+            try {
+                c.sendMessage(msg);
+            } catch (IOException e) {
+                System.err.println("[Broadcast] Lỗi gửi tới client: " + e.getMessage());
+            }
         }
     }
 
@@ -48,6 +67,10 @@ public class AuctionServer {
         private final BidTransactionDAO bidTransactionDAO = new BidTransactionDAO();
 
         public ClientHandler(Socket socket) { this.clientSocket = socket; }
+
+        public synchronized void sendMessage(Message msg) throws IOException {
+            if (out != null) { out.writeObject(msg); out.flush(); }
+        }
 
         @Override
         public void run() {
@@ -155,7 +178,85 @@ public class AuctionServer {
                             out.flush();
                         }
 
-                        // ── MỚI: NẠP TIỀN ─────────────────────────────────────
+                        // ── ĐẶT GIÁ ───────────────────────────────────────────
+                        case "PLACE_BID" -> {
+                            if (!(currentUser instanceof Bidder)) {
+                                out.writeObject(new Message("PLACE_BID_FAILED",
+                                        "Chỉ tài khoản Bidder mới được đặt giá!"));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                @SuppressWarnings("unchecked")
+                                HashMap<String, Object> p = (HashMap<String, Object>) request.getPayload();
+                                String auctionId = (String) p.get("auctionId");
+                                double amount    = (double) p.get("amount");
+
+                                Bidder bidder = (Bidder) currentUser;
+
+                                // Lấy phiên từ AuctionManager (in-memory) trước, fallback sang DB
+                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
+                                if (auction == null) {
+                                    // Load từ DB nếu chưa có trong memory
+                                    auction = auctionDAO.findById(auctionId)
+                                            .orElseThrow(() -> new IllegalArgumentException(
+                                                    "Không tìm thấy phiên đấu giá: " + auctionId));
+                                    AuctionManager.getInstance().registerAuction(auction);
+                                }
+
+                                // Kiểm tra số dư
+                                if (bidder.getBalance() < amount) {
+                                    out.writeObject(new Message("PLACE_BID_FAILED",
+                                            "Số dư không đủ! Số dư hiện tại: "
+                                            + String.format("%,.0f đ", bidder.getBalance())));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Kiểm tra giá hợp lệ
+                                if (amount <= auction.getCurrentPrice()) {
+                                    out.writeObject(new Message("PLACE_BID_FAILED",
+                                            String.format("Giá phải cao hơn %,.0f đ!", auction.getCurrentPrice())));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Thực hiện đặt giá (cập nhật in-memory)
+                                auction.placeBid(bidder, amount);
+
+                                // Tạo BidTransaction và lưu vào DB
+                                BidTransaction tx = new BidTransaction(bidder, amount, auctionId);
+                                bidTransactionDAO.save(tx);
+
+                                // Cập nhật auction trong DB (current_price, status)
+                                auctionDAO.update(auction);
+
+                                // Trừ số dư bidder
+                                double newBalance = bidder.getBalance() - amount;
+                                userDAO.updateBalance(bidder.getId(), newBalance);
+                                bidder.setBalance(newBalance);
+
+                                // Gửi kết quả về người đặt
+                                out.writeObject(new Message("PLACE_BID_SUCCESS", tx));
+                                out.flush();
+
+                                // Broadcast NEW_BID tới tất cả client khác đang xem
+                                broadcast(new Message("NEW_BID", tx), this);
+
+                                System.out.printf("[Server] PLACE_BID OK: %s đặt %.0f vào %s%n",
+                                        bidder.getUsername(), amount, auctionId);
+
+                            } catch (IllegalArgumentException e) {
+                                out.writeObject(new Message("PLACE_BID_FAILED", e.getMessage()));
+                                out.flush();
+                            } catch (Exception e) {
+                                out.writeObject(new Message("PLACE_BID_FAILED", "Lỗi server: " + e.getMessage()));
+                                e.printStackTrace();
+                                out.flush();
+                            }
+                        }
+
+                        // ── NẠP TIỀN ─────────────────────────────────────────
                         case "TOP_UP" -> {
                             if (!(currentUser instanceof Bidder)) {
                                 out.writeObject(new Message("TOP_UP_FAILED",
@@ -183,7 +284,7 @@ public class AuctionServer {
                             out.flush();
                         }
 
-                        // ── MỚI: LẤY PHIÊN ĐẤU GIÁ CỦA SELLER ───────────────
+                        // ── LẤY PHIÊN ĐẤU GIÁ CỦA SELLER ───────────────────
                         case "GET_MY_AUCTIONS" -> {
                             try {
                                 List<Auction> list;
@@ -203,12 +304,12 @@ public class AuctionServer {
                             out.flush();
                         }
 
-                        // ── MỚI: LẤY LỊCH SỬ BID CỦA BIDDER ─────────────────
+                        // ── LẤY LỊCH SỬ BID CỦA BIDDER ─────────────────────
                         case "GET_MY_BIDS" -> {
                             try {
                                 List<BidTransaction> list;
                                 if (currentUser instanceof Bidder bidder) {
-                                    list = bidTransactionDAO.findByBidder(bidder.getId());
+                                    list = bidTransactionDAO.findByBidderWithItem(bidder.getId(), auctionDAO);
                                 } else {
                                     list = new ArrayList<>();
                                 }
@@ -223,7 +324,7 @@ public class AuctionServer {
                             out.flush();
                         }
 
-                        // ── MỚI: CẬP NHẬT THÔNG TIN CÁ NHÂN ──────────────────
+                        // ── CẬP NHẬT THÔNG TIN CÁ NHÂN ──────────────────────
                         case "UPDATE_PROFILE" -> {
                             if (currentUser == null) {
                                 out.writeObject(new Message("UPDATE_PROFILE_FAILED", "Chưa đăng nhập!"));
@@ -264,6 +365,7 @@ public class AuctionServer {
             } catch (Exception e) {
                 System.err.println("[ClientHandler] Lỗi: " + e.getMessage());
             } finally {
+                connectedClients.remove(this);
                 try { if (clientSocket != null) clientSocket.close(); }
                 catch (IOException ex) { ex.printStackTrace(); }
             }

@@ -40,9 +40,22 @@
                             </children>
                         </VBox>
 
+                        <!-- Số dư (chỉ Bidder) -->
+                        <VBox fx:id="paneBalance" alignment="CENTER" spacing="2.0"
+                              style="-fx-padding: 10 10 10 10; -fx-background-color: rgba(226,255,0,0.06); -fx-border-color: rgba(226,255,0,0.25); -fx-border-width: 0 0 1 0;"
+                              visible="false" managed="false">
+                            <children>
+                                <Label text="Số dư" textFill="rgba(255,255,255,0.55)">
+                                    <font><Font size="10.0" /></font>
+                                </Label>
+                                <Label fx:id="lblBalance" text="0 đ" textFill="#e2ff00">
+                                    <font><Font name="System Bold" size="13.0" /></font>
+                                </Label>
+                            </children>
+                        </VBox>
+
                         <!-- Nav buttons -->
-                        <VBox prefHeight="171.0" prefWidth="159.0" spacing="4.0"
-                              style="-fx-padding: 12 8 12 8;">
+                        <VBox spacing="4.0" style="-fx-padding: 12 8 12 8;">
                             <children>
                                 <Button maxWidth="Infinity" mnemonicParsing="false" opacity="0.87"
                                         text="Home"
@@ -55,13 +68,13 @@
                                     <font><Font name="System Bold" size="12.0" /></font>
                                 </Button>
 
-                                <!-- NÚT MỚI: Đăng bán SP -->
-                                <Button maxWidth="Infinity" mnemonicParsing="false"
+                                <!-- Đăng bán SP — ẩn nếu không phải Seller -->
+                                <Button fx:id="btnSellProduct" maxWidth="Infinity" mnemonicParsing="false"
                                         onAction="#handleGoProductSeller"
                                         text="+ Đăng bán SP"
+                                        visible="false" managed="false"
                                         style="-fx-background-color: rgba(226,255,0,0.10); -fx-text-fill: #e2ff00; -fx-font-weight: bold; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: rgba(226,255,0,0.45); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" />
 
-                                <!-- NÚT MỚI: Hồ sơ -->
                                 <Button maxWidth="Infinity" mnemonicParsing="false"
                                         onAction="#handleGoProfile"
                                         text="Hồ sơ" textFill="WHITE"
