@@ -21,8 +21,8 @@ public class ItemDAO {
 
     public void save(Item item) throws SQLException {
         String sql = """
-            INSERT INTO items (id, name, description, base_price, category, seller_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO items (id, name, description, base_price, category, seller_id, image_data, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, item.getId());
@@ -31,8 +31,9 @@ public class ItemDAO {
             ps.setDouble(4, item.getBasePrice());
             ps.setString(5, item.getCategory());
             ps.setString(6, item.getSeller().getId());
-            ps.setTimestamp(7, Timestamp.valueOf(item.getCreatedAt()));
-            ps.setTimestamp(8, Timestamp.valueOf(item.getUpdatedAt()));
+            ps.setString(7, item.getImageBase64());
+            ps.setTimestamp(8, Timestamp.valueOf(item.getCreatedAt()));
+            ps.setTimestamp(9, Timestamp.valueOf(item.getUpdatedAt()));
             ps.executeUpdate();
             System.out.println("[ItemDAO] Đã lưu item: " + item.getName());
         }
@@ -104,26 +105,25 @@ public class ItemDAO {
     // ── MAP ROW TO ITEM ────────────────────────────────────────
 
     private Item mapRowToItem(ResultSet rs) throws SQLException {
-        String id = rs.getString("id");
-        String name = rs.getString("name");
+        String id          = rs.getString("id");
+        String name        = rs.getString("name");
         String description = rs.getString("description");
-        double basePrice = rs.getDouble("base_price");
-        String category = rs.getString("category");
-        String sellerId = rs.getString("seller_id");
+        double basePrice   = rs.getDouble("base_price");
+        String category    = rs.getString("category");
+        String sellerId    = rs.getString("seller_id");
+        String imageBase64 = rs.getString("image_data");
 
-        // Load seller từ UserDAO
         Seller seller = (Seller) userDAO.findById(sellerId)
                 .orElseThrow(() -> new SQLException("Không tìm thấy seller: " + sellerId));
 
-        // Tạo đúng subclass dựa trên category
-        return switch (category) {
-            case "ELECTRONICS" -> new Electronics(id, name, description, basePrice, seller, 12); // default warranty
-            case "ART" -> new Art(id, name, description, basePrice, seller, "Unknown", 2024);
-            case "VEHICLE" -> new Vehicle(id, name, description, basePrice, seller, "Unknown", 0);
+        Item item = switch (category) {
+            case "ELECTRONICS" -> new Electronics(id, name, description, basePrice, seller, 12);
+            case "ART"         -> new Art(id, name, description, basePrice, seller, "Unknown", 2024);
+            case "VEHICLE"     -> new Vehicle(id, name, description, basePrice, seller, "Unknown", 0);
             default -> throw new SQLException("Category không hợp lệ: " + category);
         };
+        item.setImageBase64(imageBase64);
+        return item;
     }
 
 }
-    
-

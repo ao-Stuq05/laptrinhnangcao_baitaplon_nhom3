@@ -9,6 +9,7 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -78,6 +79,18 @@ public class ProductController {
         lblStartPrice.setText(fmt(auction.getItem().getBasePrice()) + "đ");
         refreshCurrentPrice(auction.getCurrentPrice());
         refreshStatus(auction.getStatus());
+
+        // Hiển thị ảnh sản phẩm từ Base64
+        String base64 = auction.getItem().getImageBase64();
+        if (base64 != null && !base64.isEmpty()) {
+            try {
+                byte[] imageBytes = java.util.Base64.getDecoder().decode(base64);
+                java.io.ByteArrayInputStream bis = new java.io.ByteArrayInputStream(imageBytes);
+                imgProduct.setImage(new Image(bis));
+            } catch (Exception e) {
+                System.out.println("[ProductController] Không load được ảnh: " + e.getMessage());
+            }
+        }
     }
 
     private void refreshCurrentPrice(double price) {
@@ -110,7 +123,7 @@ public class ProductController {
             // Cảnh báo nếu có frozen
             if (frozen > 0 && paneBalanceInline != null) {
                 lblBalanceInline.setText(
-                    fmt(avail) + " đ  (đang giữ " + fmt(frozen) + "đ)");
+                        fmt(avail) + " đ  (đang giữ " + fmt(frozen) + "đ)");
                 lblBalanceInline.setTextFill(Color.web("#ffd700"));
             } else {
                 lblBalanceInline.setTextFill(Color.web("#00ff88"));

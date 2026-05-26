@@ -14,7 +14,7 @@ public class DatabaseManager {
     private static final String DB_HOST = "jdbc:mysql://localhost:3306/";
     private static final String DB_NAME = "auction_db";
     private static final String DB_OPTIONS = "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
-    
+
     private static final String USER = "root";
     private static final String PASS = "";
 
@@ -28,7 +28,7 @@ public class DatabaseManager {
 
             // 2. Kết nối tới MySQL (không chỉ định DB trước để tránh lỗi nếu DB chưa tồn tại)
             connection = DriverManager.getConnection(DB_HOST + DB_OPTIONS, USER, PASS);
-            
+
             // 3. Khởi tạo Database và Bảng
             initDatabase();
 
@@ -66,7 +66,7 @@ public class DatabaseManager {
             stmt.execute("CREATE DATABASE IF NOT EXISTS " + DB_NAME);
             // Sử dụng database
             stmt.execute("USE " + DB_NAME);
-            
+
             // Bật kiểm tra khóa ngoại
             stmt.execute("SET FOREIGN_KEY_CHECKS = 1;");
 
@@ -101,11 +101,18 @@ public class DatabaseManager {
                 base_price DOUBLE NOT NULL CHECK(base_price > 0),
                 category ENUM('ELECTRONICS','ART','VEHICLE') NOT NULL,
                 seller_id VARCHAR(50) NOT NULL,
+                image_data MEDIUMTEXT,
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL,
                 FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE
             ) ENGINE=InnoDB;
         """);
+        // Thêm cột image_data nếu bảng đã tồn tại từ phiên bản cũ
+        try {
+            stmt.execute("ALTER TABLE items ADD COLUMN image_data MEDIUMTEXT");
+        } catch (java.sql.SQLException ignored) {
+            // Cột đã tồn tại → bỏ qua
+        }
 
         // 3. Bảng auctions
         stmt.execute("""

@@ -10,6 +10,7 @@ public abstract class Item extends Entity implements Serializable {
     protected String description;
     protected double basePrice;
     protected Seller seller;
+    protected String imageBase64;
 
     protected Item(String id, String name, String description, double basePrice, Seller seller) {
         super();
@@ -17,6 +18,7 @@ public abstract class Item extends Entity implements Serializable {
         this.description = description;
         this.basePrice = basePrice;
         this.seller = seller;
+        this.imageBase64 = null;
     }
 
     /** Returns the category label, e.g. "ELECTRONICS", "ART", "VEHICLE" */
@@ -36,4 +38,6 @@ public abstract class Item extends Entity implements Serializable {
     public double getBasePrice() { return basePrice; }
     public Seller getSeller() { return seller; }
     public void setDescription(String description) { this.description = description; }
+    public String getImageBase64() { return imageBase64; }
+    public void setImageBase64(String imageBase64) { this.imageBase64 = imageBase64; }
 }

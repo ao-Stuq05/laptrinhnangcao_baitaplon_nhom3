@@ -144,6 +144,13 @@ public class AuctionServer {
                                     default -> throw new IllegalArgumentException("Danh mục không hợp lệ: " + category);
                                 };
 
+                                // ── Gán Base64 ảnh vào item nếu có ─────────────
+                                String imageBase64 = (String) payload.get("imageBase64");
+                                if (imageBase64 != null && !imageBase64.isEmpty()) {
+                                    item.setImageBase64(imageBase64);
+                                    System.out.println("[Server] Đã nhận ảnh Base64 cho item: " + itemId);
+                                }
+
                                 itemDAO.save(item);
 
                                 String auctionId = "AUC-" + System.currentTimeMillis();
@@ -208,7 +215,7 @@ public class AuctionServer {
                                 if (bidder.getBalance() < amount) {
                                     out.writeObject(new Message("PLACE_BID_FAILED",
                                             "Số dư không đủ! Số dư hiện tại: "
-                                            + String.format("%,.0f đ", bidder.getBalance())));
+                                                    + String.format("%,.0f đ", bidder.getBalance())));
                                     out.flush();
                                     break;
                                 }

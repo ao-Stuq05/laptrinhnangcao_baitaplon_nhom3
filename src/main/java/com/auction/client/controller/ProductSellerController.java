@@ -3,6 +3,8 @@ package com.auction.client.controller;
 import com.auction.client.SceneManager;
 import com.auction.client.network.ServerConnection;
 import com.auction.shared.model.Message;
+import com.auction.shared.model.Seller;
+import com.auction.shared.model.User;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -10,7 +12,9 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.time.LocalDate;
+import java.util.Base64;
 import java.util.HashMap;
 
 public class ProductSellerController {
@@ -34,6 +38,18 @@ public class ProductSellerController {
 
     @FXML
     public void initialize() {
+        // Chặn Bidder truy cập màn hình này
+        User user = ServerConnection.getInstance().getCurrentUser();
+        if (!(user instanceof Seller)) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Không có quyền truy cập");
+            alert.setHeaderText(null);
+            alert.setContentText("Tính năng này chỉ dành cho Seller!");
+            alert.showAndWait();
+            SceneManager.switchScene("UI.fxml");
+            return;
+        }
+
         cbCategory.setItems(FXCollections.observableArrayList(
                 "Đồng hồ & Trang sức",
                 "Điện tử",
@@ -132,7 +148,13 @@ public class ProductSellerController {
             payload.put("startDate",   startDate.toString());
             payload.put("endDate",     endDate.toString());
             if (selectedImageFile != null) {
-                payload.put("imagePath", selectedImageFile.getAbsolutePath());
+                try {
+                    byte[] imageBytes = Files.readAllBytes(selectedImageFile.toPath());
+                    String imageBase64 = Base64.getEncoder().encodeToString(imageBytes);
+                    payload.put("imageBase64", imageBase64);
+                } catch (Exception imgEx) {
+                    System.out.println("⚠ Không đọc được file ảnh: " + imgEx.getMessage());
+                }
             }
 
             Message msg = new Message("CREATE_AUCTION", payload);
