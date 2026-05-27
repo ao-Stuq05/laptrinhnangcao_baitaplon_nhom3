@@ -131,8 +131,11 @@ public class AuctionServer {
                                 String category  = (String) payload.get("category");
                                 String desc      = (String) payload.get("description");
                                 double price     = (double) payload.get("startPrice");
-                                LocalDate startD = LocalDate.parse((String) payload.get("startDate"));
-                                LocalDate endD   = LocalDate.parse((String) payload.get("endDate"));
+                                // Nhận LocalDateTime dạng ISO (yyyy-MM-ddTHH:mm:ss) từ client
+                                java.time.LocalDateTime startD = java.time.LocalDateTime.parse(
+                                        (String) payload.get("startDateTime"));
+                                java.time.LocalDateTime endD = java.time.LocalDateTime.parse(
+                                        (String) payload.get("endDateTime"));
 
                                 String itemId = UUID.randomUUID().toString();
                                 Item item = switch (category) {
@@ -155,7 +158,7 @@ public class AuctionServer {
 
                                 String auctionId = "AUC-" + System.currentTimeMillis();
                                 Auction auction  = new Auction(auctionId, item, seller,
-                                        startD.atStartOfDay(), endD.atStartOfDay());
+                                        startD, endD);
 
                                 auctionDAO.save(auction);
                                 AuctionManager.getInstance().registerAuction(auction);

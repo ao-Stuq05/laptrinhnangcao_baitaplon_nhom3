@@ -13,7 +13,8 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.HashMap;
 
@@ -26,8 +27,16 @@ public class ProductSellerController {
     @FXML private ComboBox<String> cbCondition;
     @FXML private TextArea   txtDescription;
     @FXML private TextField  txtStartPrice;
-    @FXML private DatePicker dpStartDate;
-    @FXML private DatePicker dpEndDate;
+
+    /** Hiển thị thời gian bắt đầu cố định = thời điểm mở form (read-only) */
+    @FXML private Label      lblStartTime;
+
+    /** Nhập số giờ thủ công */
+    @FXML private TextField txtDurationHours;
+
+    /** Nhập số phút thủ công */
+    @FXML private TextField txtDurationMinutes;
+
     @FXML private Label      lblImageHint;
     @FXML private Label      lblError;
 
@@ -65,8 +74,11 @@ public class ProductSellerController {
                 "Cổ vật / Cũ"
         ));
 
-        dpStartDate.setValue(LocalDate.now());
-        dpEndDate.setValue(LocalDate.now().plusDays(1));
+        // ── Thời gian bắt đầu: cố định = thời điểm mở form ──────────────────
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+        lblStartTime.setText(LocalDateTime.now().format(fmt));
+
+        // txtDurationHours và txtDurationMinutes không cần khởi tạo gì thêm
     }
 
     // ── Xử lý chọn ảnh ────────────────────────────────────────────────────────
@@ -97,25 +109,11 @@ public class ProductSellerController {
         String condition = cbCondition.getValue();
         String desc      = txtDescription.getText().trim();
         String priceText = txtStartPrice.getText().trim();
-        LocalDate startDate = dpStartDate.getValue();
-        LocalDate endDate   = dpEndDate.getValue();
 
-        if (name.isEmpty()) {
-            showError("Vui lòng nhập tên sản phẩm!");
-            return;
-        }
-        if (category == null) {
-            showError("Vui lòng chọn danh mục!");
-            return;
-        }
-        if (condition == null) {
-            showError("Vui lòng chọn tình trạng sản phẩm!");
-            return;
-        }
-        if (priceText.isEmpty()) {
-            showError("Vui lòng nhập giá khởi điểm!");
-            return;
-        }
+        if (name.isEmpty()) { showError("Vui lòng nhập tên sản phẩm!"); return; }
+        if (category == null) { showError("Vui lòng chọn danh mục!"); return; }
+        if (condition == null) { showError("Vui lòng chọn tình trạng sản phẩm!"); return; }
+        if (priceText.isEmpty()) { showError("Vui lòng nhập giá khởi điểm!"); return; }
 
         double startPrice;
         try {
@@ -126,27 +124,50 @@ public class ProductSellerController {
             return;
         }
 
-        if (startDate == null || endDate == null) {
-            showError("Vui lòng chọn ngày bắt đầu và kết thúc!");
+        // Lấy số giờ và phút từ TextField
+        int durationHours, durationMinutes;
+        try {
+            String hText = txtDurationHours.getText().trim();
+            durationHours = hText.isEmpty() ? 0 : Integer.parseInt(hText);
+            if (durationHours < 0) throw new NumberFormatException();
+        } catch (NumberFormatException e) {
+            showError("Số giờ không hợp lệ!");
             return;
         }
-        if (!endDate.isAfter(startDate)) {
-            showError("Ngày kết thúc phải sau ngày bắt đầu!");
+        try {
+            String mText = txtDurationMinutes.getText().trim();
+            durationMinutes = mText.isEmpty() ? 0 : Integer.parseInt(mText);
+            if (durationMinutes < 0 || durationMinutes > 59) throw new NumberFormatException();
+        } catch (NumberFormatException e) {
+            showError("Số phút không hợp lệ (0 – 59)!");
+            return;
+        }
+
+        if (durationHours == 0 && durationMinutes == 0) {
+            showError("Thời lượng phải ít nhất 1 phút!");
             return;
         }
 
         hideError();
 
+        // Tính startDateTime (= ngay lúc submit) và endDateTime
+        LocalDateTime startDateTime = LocalDateTime.now();
+        LocalDateTime endDateTime   = startDateTime
+                .plusHours(durationHours)
+                .plusMinutes(durationMinutes);
+        DateTimeFormatter isoFmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
         // --- Đóng gói payload và gửi lên server ---
         try {
             HashMap<String, Object> payload = new HashMap<>();
-            payload.put("name",        name);
-            payload.put("category",    category);
-            payload.put("condition",   condition);
-            payload.put("description", desc);
-            payload.put("startPrice",  startPrice);
-            payload.put("startDate",   startDate.toString());
-            payload.put("endDate",     endDate.toString());
+            payload.put("name",          name);
+            payload.put("category",      category);
+            payload.put("condition",     condition);
+            payload.put("description",   desc);
+            payload.put("startPrice",    startPrice);
+            payload.put("startDateTime", startDateTime.format(isoFmt));
+            payload.put("endDateTime",   endDateTime.format(isoFmt));
+
             if (selectedImageFile != null) {
                 try {
                     byte[] imageBytes = Files.readAllBytes(selectedImageFile.toPath());
@@ -161,9 +182,8 @@ public class ProductSellerController {
             ServerConnection.getInstance().sendMessage(msg);
             System.out.println(">>> Đã gửi yêu cầu ĐĂNG BÁN lên Server!");
 
-            // ✅ KHÔNG chuyển màn hình ở đây
-            // Việc chuyển màn hình sẽ do ServerConnection.handleServerResponse()
-            // thực hiện sau khi nhận CREATE_AUCTION_SUCCESS từ server
+            // ✅ KHÔNG chuyển màn hình ở đây — ServerConnection xử lý
+            // sau khi nhận CREATE_AUCTION_SUCCESS từ server
 
         } catch (Exception e) {
             showError("Không thể kết nối tới server!");
@@ -174,30 +194,17 @@ public class ProductSellerController {
 
     // ── Điều hướng ─────────────────────────────────────────────────────────────
 
-    @FXML
-    private void handleGoBack() {
-        SceneManager.switchScene("UI.fxml");
-    }
-
-    @FXML
-    private void handleGoHome() {
-        SceneManager.switchScene("UI.fxml");
-    }
-
-    @FXML
-    private void handleGoMyAuction() {
-        SceneManager.switchScene("UI.fxml");
-    }
+    @FXML private void handleGoBack()      { SceneManager.switchScene("UI.fxml"); }
+    @FXML private void handleGoHome()      { SceneManager.switchScene("UI.fxml"); }
+    @FXML private void handleGoMyAuction() { SceneManager.switchScene("UI.fxml"); }
 
     @FXML
     private void handleLogout() {
         try {
             Message msg = new Message("LOGOUT", null);
             ServerConnection.getInstance().sendMessage(msg);
-            System.out.println(">>> Đã gửi yêu cầu ĐĂNG XUẤT lên Server!");
         } catch (Exception e) {
             System.out.println("⚠ Không thể gửi lệnh đăng xuất tới Server!");
-            e.printStackTrace();
         }
         SceneManager.switchScene("login.fxml");
     }
@@ -205,15 +212,10 @@ public class ProductSellerController {
     // ── Helper ─────────────────────────────────────────────────────────────────
 
     private void showError(String msg) {
-        if (lblError != null) {
-            lblError.setText(msg);
-            lblError.setVisible(true);
-        }
+        if (lblError != null) { lblError.setText(msg); lblError.setVisible(true); }
     }
 
     private void hideError() {
-        if (lblError != null) {
-            lblError.setVisible(false);
-        }
+        if (lblError != null) { lblError.setVisible(false); }
     }
 }
