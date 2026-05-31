@@ -19,24 +19,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UIController {
-
     @FXML private TextField        txtSearch;
     @FXML private ComboBox<String> cbFilter;
     @FXML private GridPane         gridAuctions;
-
-    // Nút « và » trong FXML
     @FXML private Button btnPrev;
     @FXML private Button btnNext;
     @FXML private Button btnMyAuction;
-
-    // HBox chứa các nút số trang (inject động)
     @FXML private HBox   hboxPageButtons;
-
-    // Nút đăng bán — chỉ hiển thị với SELLER
     @FXML private Button btnSellProduct;
 
     private static final int    ITEMS_PER_PAGE = 6; // 3 cột x 2 hàng
     private List<Auction>       allAuctions    = new ArrayList<>();
+    private List<Auction>       filteredAuctions = new ArrayList<>();
     private int                 currentPage    = 1;
 
     @FXML
@@ -57,6 +51,13 @@ public class UIController {
             btnMyAuction.setVisible(isSeller);
             btnMyAuction.setManaged(isSeller);
         }
+
+        // Realtime search — lắng nghe mỗi ký tự
+        txtSearch.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+
+        // Lọc theo category khi đổi ComboBox
+        cbFilter.valueProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+
         ServerConnection.getInstance().setAuctionListCallback(this::displayAuctions);
 
         try {
@@ -71,17 +72,43 @@ public class UIController {
         Platform.runLater(() -> {
             if (gridAuctions == null) return;
             this.allAuctions = (auctions != null) ? auctions : new ArrayList<>();
+            this.filteredAuctions = new ArrayList<>(this.allAuctions);
             this.currentPage = 1;
             renderPage(currentPage);
             renderPageButtons();
         });
     }
 
+    private void applyFilter() {
+        String keyword  = txtSearch.getText().trim().toLowerCase();
+        String category = cbFilter.getValue();
+
+        filteredAuctions = allAuctions.stream()
+                .filter(a -> {
+                    boolean matchName = keyword.isEmpty()
+                            || a.getItem().getName().toLowerCase().contains(keyword);
+                    boolean matchCategory = category == null
+                            || "Tất cả".equals(category)
+                            || a.getItem().getCategory().equalsIgnoreCase(
+                            category.equals("Điện tử")          ? "ELECTRONICS" :
+                                    category.equals("Nghệ thuật")        ? "ART" :
+                                            category.equals("Xe cộ")            ? "VEHICLE" :
+                                                    category.equals("Đồng hồ & Trang sức") ? "JEWELRY" : category
+                    );
+                    return matchName && matchCategory;
+                })
+                .collect(java.util.stream.Collectors.toList());
+
+        currentPage = 1;
+        renderPage(currentPage);
+        renderPageButtons();
+    }
+
     // Render các card của trang hiện tại vào GridPane
     private void renderPage(int page) {
         gridAuctions.getChildren().clear();
 
-        if (allAuctions.isEmpty()) {
+        if (filteredAuctions.isEmpty()) {
             Label empty = new Label("Chưa có phiên đấu giá nào.");
             empty.setTextFill(Color.WHITE);
             gridAuctions.add(empty, 0, 0);
@@ -89,11 +116,11 @@ public class UIController {
         }
 
         int from = (page - 1) * ITEMS_PER_PAGE;
-        int to   = Math.min(from + ITEMS_PER_PAGE, allAuctions.size());
+        int to = Math.min(from + ITEMS_PER_PAGE, filteredAuctions.size());
 
         int col = 0, row = 0;
         for (int i = from; i < to; i++) {
-            VBox card = buildAuctionCard(allAuctions.get(i));
+            VBox card = buildAuctionCard(filteredAuctions.get(i));
             gridAuctions.add(card, col, row);
             col++;
             if (col == 3) { col = 0; row++; }
@@ -104,7 +131,7 @@ public class UIController {
     private void renderPageButtons() {
         hboxPageButtons.getChildren().clear();
 
-        int totalPages = (int) Math.ceil((double) allAuctions.size() / ITEMS_PER_PAGE);
+        int totalPages = (int) Math.ceil((double) filteredAuctions.size() / ITEMS_PER_PAGE);
 
         // Ẩn/hiện toàn bộ khu vực pagination
         boolean show = totalPages > 1;
@@ -129,7 +156,7 @@ public class UIController {
     }
 
     private void goToPage(int page) {
-        int totalPages = (int) Math.ceil((double) allAuctions.size() / ITEMS_PER_PAGE);
+        int totalPages = (int) Math.ceil((double) filteredAuctions.size() / ITEMS_PER_PAGE);
         if (page < 1 || page > totalPages) return;
         currentPage = page;
         renderPage(currentPage);
@@ -165,7 +192,14 @@ public class UIController {
         Label lblTime = new Label(timeText);
         lblTime.setTextFill(minutesLeft > 0 ? Color.LIGHTGREEN : Color.SALMON);
 
-        Label lblCategory = new Label(auction.getItem().getCategory());
+        String catDisplay = switch (auction.getItem().getCategory().toUpperCase()) {
+            case "ELECTRONICS" -> "Điện tử";
+            case "ART"         -> "Nghệ thuật";
+            case "VEHICLE"     -> "Xe cộ";
+            case "JEWELRY"     -> "Đồng hồ & Trang sức";
+            default            -> auction.getItem().getCategory();
+        };
+        Label lblCategory = new Label(catDisplay);
         lblCategory.setTextFill(Color.LIGHTYELLOW);
         lblCategory.setFont(Font.font(11));
 
