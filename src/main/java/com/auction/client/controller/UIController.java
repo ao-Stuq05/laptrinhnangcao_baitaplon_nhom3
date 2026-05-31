@@ -35,7 +35,7 @@ public class UIController {
 
     @FXML
     public void initialize() {
-        cbFilter.getItems().addAll("Tất cả", "Điện tử", "Nghệ thuật", "Xe cộ", "Đồng hồ & Trang sức");
+        cbFilter.getItems().addAll("Tất cả", "Điện tử", "Nghệ thuật", "Xe cộ", "Đồng hồ & Trang sức", "Đã kết thúc");
         cbFilter.setValue("Tất cả");
 
         // Kiểm tra role: chỉ SELLER mới thấy nút "+ Đăng bán SP"
@@ -89,10 +89,11 @@ public class UIController {
                             || a.getItem().getName().toLowerCase().contains(keyword);
                     boolean matchCategory = category == null
                             || "Tất cả".equals(category)
+                            || ("Đã kết thúc".equals(category) && a.getEndTime().isBefore(LocalDateTime.now()))
                             || a.getItem().getCategory().equalsIgnoreCase(
-                            category.equals("Điện tử")          ? "ELECTRONICS" :
-                                    category.equals("Nghệ thuật")        ? "ART" :
-                                            category.equals("Xe cộ")            ? "VEHICLE" :
+                            category.equals("Điện tử")             ? "ELECTRONICS" :
+                                    category.equals("Nghệ thuật")           ? "ART" :
+                                            category.equals("Xe cộ")               ? "VEHICLE" :
                                                     category.equals("Đồng hồ & Trang sức") ? "JEWELRY" : category
                     );
                     return matchName && matchCategory;
