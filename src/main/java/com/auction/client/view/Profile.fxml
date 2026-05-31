@@ -53,7 +53,7 @@
                                         style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" />
 
                                 <Button fx:id="btnSellProduct" maxWidth="Infinity" mnemonicParsing="false"
-                                        onAction="#handleGoProductSeller"
+                                        onAction="#handleGoCreateAuction"
                                         text="+ Đăng bán SP"
                                         style="-fx-background-color: rgba(226,255,0,0.10); -fx-text-fill: #e2ff00; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: rgba(226,255,0,0.45); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" />
 
