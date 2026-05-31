@@ -196,7 +196,6 @@ public class ProductSellerController {
 
     @FXML private void handleGoBack()        { SceneManager.switchScene("UI.fxml"); }
     @FXML private void handleGoHome()        { SceneManager.switchScene("UI.fxml"); }
-    @FXML private void handleGoMyAuction()   { SceneManager.switchScene("UI.fxml"); }
     @FXML private void handleGoProfile()     { SceneManager.switchScene("Profile.fxml"); }
 
     @FXML
@@ -208,6 +207,9 @@ public class ProductSellerController {
             System.out.println("⚠ Không thể gửi lệnh đăng xuất tới Server!");
         }
         SceneManager.switchScene("login.fxml");
+    }
+    @FXML private void handleGoMyAuction() {
+        SceneManager.switchScene("MyAuctions.fxml");
     }
 
     // ── Helper ─────────────────────────────────────────────────────────────────

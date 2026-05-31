@@ -41,6 +41,7 @@ public class ProductController {
     @FXML private HBox      paneBalanceInline;
     @FXML private Label     lblBalanceInline;
     @FXML private Button    btnSellProduct;   // chỉ visible với SELLER
+    @FXML private Button btnMyAuction;
 
     private Auction  currentAuction;
     private Timeline countdown;
@@ -72,6 +73,18 @@ public class ProductController {
         ServerConnection conn = ServerConnection.getInstance();
         conn.setBidUpdateCallback(this::onNewBidReceived);
         conn.setAuctionClosedCallback(this::onAuctionClosed);
+
+        // Hiện nút Đăng bán SP và Đấu giá tôi nếu là Seller
+        User currentUser = ServerConnection.getInstance().getCurrentUser();
+        boolean isSeller = currentUser != null && "SELLER".equals(currentUser.getRole());
+        if (btnSellProduct != null) {
+            btnSellProduct.setVisible(isSeller);
+            btnSellProduct.setManaged(isSeller);
+        }
+        if (btnMyAuction != null) {
+            btnMyAuction.setVisible(isSeller);
+            btnMyAuction.setManaged(isSeller);
+        }
     }
 
     // ── Load thông tin phiên ──────────────────────────────────────────────────
@@ -365,7 +378,9 @@ public class ProductController {
         catch (Exception ignored) {}
         SceneManager.switchScene("login.fxml");
     }
-
+    @FXML private void handleGoMyAuction() {
+        SceneManager.switchScene("MyAuctions.fxml");
+    }
     private void cleanup() {
         if (countdown != null) countdown.stop();
         ServerConnection conn = ServerConnection.getInstance();

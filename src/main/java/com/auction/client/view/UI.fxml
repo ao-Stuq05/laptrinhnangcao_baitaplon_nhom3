@@ -64,7 +64,7 @@
 
                                 <Button maxWidth="Infinity" mnemonicParsing="false"
                                         onAction="#handleGoProfile"
-                                        text="Hồ sơ cá nhân"
+                                        text="Hồ sơ"
                                         style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" />
 
                                 <Button fx:id="btnMyAuction" maxWidth="Infinity" mnemonicParsing="false"
@@ -77,7 +77,7 @@
                                         onAction="#handleGoProductSeller"
                                         text="+ Đăng bán SP"
                                         visible="false" managed="false"
-                                        style="-fx-background-color: rgba(226,255,0,0.10); -fx-text-fill: #e2ff00; -fx-font-weight: bold; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: rgba(226,255,0,0.45); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" />
+                                        style="-fx-background-color: rgba(226,255,0,0.10); -fx-text-fill: #e2ff00; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: rgba(226,255,0,0.45); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" />
 
 
                             </children>
