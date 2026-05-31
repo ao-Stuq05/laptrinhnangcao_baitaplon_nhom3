@@ -137,6 +137,7 @@ public class ProfileController {
     @FXML private PasswordField txtPassword;
     @FXML private Label         lblProfileMsg;
     @FXML private Button        btnEdit;
+    @FXML private Button btnSellProduct;
 
     @FXML private Button                         btnTabSell;
     @FXML private Button                         btnTabBuy;
@@ -217,6 +218,12 @@ public class ProfileController {
                 lblRole.setText("● Bidder");
                 lblRole.setStyle(badgeStyle("#60b4ff", "rgba(50,130,200,0.18)", "rgba(50,130,200,0.40)"));
             }
+        }
+        // Ẩn nút Đăng bán SP nếu không phải Seller
+        if (btnSellProduct != null) {
+            boolean isSeller = "SELLER".equals(user.getRole());
+            btnSellProduct.setVisible(isSeller);
+            btnSellProduct.setManaged(isSeller);
         }
 
         // Số dư — chỉ Bidder mới có balance

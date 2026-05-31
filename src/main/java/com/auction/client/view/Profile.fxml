@@ -20,7 +20,7 @@
             <children>
 
                 <!-- ===== SIDEBAR ===== -->
-                <VBox prefWidth="260.0" style="-fx-background-color: rgba(0,0,0,0.35); -fx-border-color: rgba(255,255,255,0.12); -fx-border-width: 0 1 0 0;">
+                <VBox prefWidth="160.0" minWidth="160.0" style="-fx-background-color: rgba(0,0,0,0.35); -fx-border-color: rgba(255,255,255,0.12); -fx-border-width: 0 1 0 0;">
                     <children>
 
                         <!-- Logo -->
@@ -38,13 +38,19 @@
                         <!-- Nav -->
                         <VBox spacing="4.0" style="-fx-padding: 12 8 12 8;">
                             <children>
-                                <Button maxWidth="Infinity" mnemonicParsing="false" onAction="#handleGoHome" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 10; -fx-cursor: hand;" text="Home">
-                                    <font><Font name="System Bold" size="12.0" /></font>
-                                </Button>
-                                <!-- Đăng bán SP — luôn hiện, controller ẩn nếu không phải Seller -->
-                                <Button fx:id="btnSellProduct" maxWidth="Infinity" mnemonicParsing="false" onAction="#handleGoProductSeller" style="-fx-background-color: rgba(226,255,0,0.10); -fx-text-fill: #e2ff00; -fx-font-weight: bold; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 10; -fx-border-color: rgba(226,255,0,0.45); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" text="+ Đăng bán SP" />
-                                <!-- Hồ sơ — active -->
-                                <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 10; -fx-border-color: transparent; -fx-background-radius: 6; -fx-cursor: hand;" text="Hồ sơ cá nhân" />
+                                <Button maxWidth="Infinity" mnemonicParsing="false"
+                                        onAction="#handleGoHome"
+                                        text="Home"
+                                        style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" />
+
+                                <Button maxWidth="Infinity" mnemonicParsing="false"
+                                        text="Hồ sơ cá nhân"
+                                        style="-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-background-radius: 6; -fx-cursor: hand;" />
+
+                                <Button fx:id="btnSellProduct" maxWidth="Infinity" mnemonicParsing="false"
+                                        onAction="#handleGoProductSeller"
+                                        text="+ Đăng bán SP"
+                                        style="-fx-background-color: rgba(226,255,0,0.10); -fx-text-fill: #e2ff00; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: rgba(226,255,0,0.45); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" />
                             </children>
                         </VBox>
 

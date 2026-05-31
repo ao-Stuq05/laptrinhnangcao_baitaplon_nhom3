@@ -27,6 +27,8 @@ public class UIController {
     // Nút « và » trong FXML
     @FXML private Button btnPrev;
     @FXML private Button btnNext;
+    @FXML private Button btnMyAuction;
+
     // HBox chứa các nút số trang (inject động)
     @FXML private HBox   hboxPageButtons;
 
@@ -50,6 +52,11 @@ public class UIController {
             btnSellProduct.setManaged(isSeller);
         }
 
+        // Ẩn nút Đấu giá tôi nếu không phải Seller
+        if (btnMyAuction != null) {
+            btnMyAuction.setVisible(isSeller);
+            btnMyAuction.setManaged(isSeller);
+        }
         ServerConnection.getInstance().setAuctionListCallback(this::displayAuctions);
 
         try {
