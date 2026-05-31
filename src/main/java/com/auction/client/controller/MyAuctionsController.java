@@ -208,7 +208,7 @@ public class MyAuctionsController {
     // ── Xử lý Chỉnh sửa & Xóa ────────────────────────────────────────────────
     private void handleEdit(Auction auction) {
         // Chuyển sang màn hình chỉnh sửa, truyền auction theo
-        SceneManager.switchScene("ProductSeller.fxml", auction);
+        SceneManager.switchScene("CreateAuction.fxml", auction);
     }
 
     private void handleDelete(Auction auction) {
@@ -266,7 +266,7 @@ public class MyAuctionsController {
     // ── Điều hướng ─────────────────────────────────────────────────────────────
     @FXML private void handleGoHome()          { SceneManager.switchScene("UI.fxml"); }
     @FXML private void handleGoProfile()       { SceneManager.switchScene("Profile.fxml"); }
-    @FXML private void handleGoProductSeller() { SceneManager.switchScene("ProductSeller.fxml"); }
+    @FXML private void handleGoCreateAuction() { SceneManager.switchScene("CreateAuction.fxml"); }
 
     @FXML
     private void handleLogout() {

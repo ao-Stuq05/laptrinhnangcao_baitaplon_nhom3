@@ -511,7 +511,7 @@ public class ProfileController {
 
     @FXML private void handleGoBack()          { SceneManager.switchScene("UI.fxml"); }
     @FXML private void handleGoHome()          { SceneManager.switchScene("UI.fxml"); }
-    @FXML private void handleGoProductSeller() { SceneManager.switchScene("ProductSeller.fxml"); }
+    @FXML private void handleGoCreateAuction() { SceneManager.switchScene("CreateAuction.fxml"); }
 
     @FXML
     private void handleLogout() {

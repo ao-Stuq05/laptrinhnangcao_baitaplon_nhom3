@@ -370,7 +370,7 @@ public class ProductController {
     // ── Điều hướng ────────────────────────────────────────────────────────────
     @FXML private void handleGoHome()  { cleanup(); SceneManager.switchScene("UI.fxml"); }
     @FXML private void handleGoBack()  { cleanup(); SceneManager.switchScene("UI.fxml"); }
-    @FXML private void handleGoProductSeller() { cleanup(); SceneManager.switchScene("ProductSeller.fxml"); }
+    @FXML private void handleGoCreateAuction() { cleanup(); SceneManager.switchScene("CreateAuction.fxml"); }
     @FXML private void handleGoProfile()       { cleanup(); SceneManager.switchScene("Profile.fxml"); }
     @FXML private void handleLogout() {
         cleanup();

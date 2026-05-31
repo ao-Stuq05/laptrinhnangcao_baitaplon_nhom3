@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.HashMap;
 
-public class ProductSellerController {
+public class CreateAuctionController {
 
     // ── FXML bindings ──────────────────────────────────────────────────────────
 

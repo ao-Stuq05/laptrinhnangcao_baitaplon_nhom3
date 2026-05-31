@@ -192,8 +192,8 @@ public class UIController {
         SceneManager.switchScene("MyAuctions.fxml");
     }
 
-    @FXML private void handleGoProductSeller() {
-        SceneManager.switchScene("ProductSeller.fxml");
+    @FXML private void handleGoCreateAuction() {
+        SceneManager.switchScene("CreateAuction.fxml");
     }
 
     @FXML private void handleGoProfile() {
