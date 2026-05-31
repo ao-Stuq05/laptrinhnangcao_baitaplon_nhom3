@@ -5,38 +5,31 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity"
-            prefHeight="600.0" prefWidth="900.0"
-            xmlns="http://javafx.com/javafx/17.0.12"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.auction.client.controller.ProductSellerController">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="680.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.ProductSellerController">
     <children>
 
         <!-- Ảnh nền — thay background.jpg thành ảnh bạn muốn -->
-        <ImageView fitHeight="600.0" fitWidth="900.0" opacity="0.82"
-                   pickOnBounds="true" preserveRatio="false"
-                   AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
-                   AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <ImageView fitHeight="680.0" fitWidth="1100.0" opacity="0.82" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <image>
                 <Image url="@/assets/background.jpg" />
             </image>
         </ImageView>
 
-        <HBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
-              AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <HBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <children>
 
                 <!-- SIDEBAR -->
-                <VBox prefWidth="160.0"
-                      style="-fx-background-color: rgba(0,0,0,0.35); -fx-border-color: rgba(255,255,255,0.12); -fx-border-width: 0 1 0 0;">
+                <VBox prefWidth="220.0" style="-fx-background-color: rgba(0,0,0,0.35); -fx-border-color: rgba(255,255,255,0.12); -fx-border-width: 0 1 0 0;">
                     <children>
 
                         <!-- Logo -->
-                        <VBox alignment="CENTER" spacing="6.0"
-                              style="-fx-padding: 24 12 20 12; -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 0 0 1 0;">
+                        <VBox alignment="CENTER" spacing="4.0" style="-fx-padding: 20 10 16 10; -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 0 0 1 0;">
                             <children>
-                                <Label text="Ten dau gia" textFill="#fffbfb">
+                                <Label maxWidth="205.0" text="🏆 ĐẤU GIÁ" textFill="#e2ff00">
                                     <font><Font name="System Bold" size="17.0" /></font>
+                                </Label>
+                                <Label maxWidth="205.0" text="TRỰC TUYẾN" textFill="rgba(255,255,255,0.70)">
+                                    <font><Font name="System Bold" size="11.0" /></font>
                                 </Label>
                             </children>
                         </VBox>
@@ -44,19 +37,15 @@
                         <!-- Nav -->
                         <VBox spacing="4.0" style="-fx-padding: 12 8 12 8;">
                             <children>
-                                <Button maxWidth="Infinity" mnemonicParsing="false"
-                                        onAction="#handleGoHome"
-                                        text="Home" textFill="WHITE"
-                                        style="-fx-background-color: transparent; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;">
+                                <Button maxWidth="Infinity" mnemonicParsing="false" onAction="#handleGoHome" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 10; -fx-cursor: hand;" text="Home">
                                     <font><Font name="System Bold" size="12.0" /></font>
                                 </Button>
-                                <Button maxWidth="Infinity" mnemonicParsing="false"
-                                        onAction="#handleGoMyAuction"
-                                        text="Đấu giá tôi"
-                                        style="-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: transparent; -fx-background-radius: 6; -fx-cursor: hand;" />
-                                <Button maxWidth="Infinity" mnemonicParsing="false"
-                                        text="+ Đăng bán SP"
-                                        style="-fx-background-color: rgba(226,255,0,0.10); -fx-text-fill: #e2ff00; -fx-font-weight: bold; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: rgba(226,255,0,0.45); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" />
+                                <!-- Đăng bán — active highlight -->
+                                <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: rgba(226,255,0,0.20); -fx-text-fill: #e2ff00; -fx-font-weight: bold; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 10; -fx-border-color: rgba(226,255,0,0.60); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" text="+ Đăng bán SP" />
+                                <!-- Hồ sơ -->
+                                <Button maxWidth="Infinity" mnemonicParsing="false" onAction="#handleGoProfile" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 10; -fx-cursor: hand;" text="Hồ sơ cá nhân">
+                                    <font><Font name="System Bold" size="12.0" /></font>
+                                </Button>
                             </children>
                         </VBox>
 
@@ -65,10 +54,7 @@
                         <!-- Logout -->
                         <VBox style="-fx-padding: 12 8 16 8; -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 1 0 0 0;">
                             <children>
-                                <Button maxWidth="Infinity" mnemonicParsing="false"
-                                        onAction="#handleLogout"
-                                        text="ĐĂNG XUẤT"
-                                        style="-fx-background-color: rgba(180,30,30,0.55); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 10 14; -fx-border-color: rgba(255,255,255,0.15); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;" />
+                                <Button maxWidth="Infinity" mnemonicParsing="false" onAction="#handleLogout" style="-fx-background-color: rgba(180,30,30,0.55); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 10 14; -fx-border-color: rgba(255,255,255,0.15); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;" text="ĐĂNG XUẤT" />
                             </children>
                         </VBox>
 
@@ -82,10 +68,7 @@
                         <!-- Header -->
                         <HBox alignment="CENTER_LEFT" spacing="12.0">
                             <children>
-                                <Button mnemonicParsing="false"
-                                        onAction="#handleGoBack"
-                                        text="← Quay lại"
-                                        style="-fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: white; -fx-border-color: rgba(255,255,255,0.20); -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand; -fx-padding: 6 14;" />
+                                <Button mnemonicParsing="false" onAction="#handleGoBack" style="-fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: white; -fx-border-color: rgba(255,255,255,0.20); -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand; -fx-padding: 6 14;" text="← Quay lại" />
                                 <Label text="ĐĂNG BÁN SẢN PHẨM" textFill="#e2ff00">
                                     <font><Font name="System Bold" size="17.0" /></font>
                                 </Label>
@@ -101,70 +84,51 @@
                                     <children>
 
                                         <!-- Thông tin sản phẩm -->
-                                        <VBox spacing="12.0"
-                                              style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 16;">
+                                        <VBox spacing="12.0" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(226,255,0,0.28); -fx-background-radius: 12; -fx-border-radius: 12; -fx-border-width: 1.5; -fx-padding: 16;">
                                             <children>
                                                 <Label text="THÔNG TIN SẢN PHẨM" textFill="#e2ff00">
                                                     <font><Font name="System Bold" size="13.0" /></font>
                                                 </Label>
 
                                                 <VBox spacing="5.0">
-                                                    <Label text="Tên sản phẩm *" textFill="#b0c4de">
+                                                    <Label text="Tên sản phẩm *" textFill="rgba(226,255,0,0.75)">
                                                         <font><Font size="12.0" /></font>
                                                     </Label>
-                                                    <TextField fx:id="txtProductName"
-                                                               promptText="Nhập tên sản phẩm..."
-                                                               style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px; -fx-padding: 0 12;"
-                                                               prefHeight="34.0" />
+                                                    <TextField fx:id="txtProductName" prefHeight="34.0" promptText="Nhập tên sản phẩm..." style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: rgba(226,255,0,0.40); -fx-border-width: 1.5; -fx-background-radius: 8; -fx-border-radius: 8; -fx-font-size: 13px; -fx-padding: 0 12;" />
                                                 </VBox>
 
                                                 <VBox spacing="5.0">
-                                                    <Label text="Danh mục *" textFill="#b0c4de">
+                                                    <Label text="Danh mục *" textFill="rgba(226,255,0,0.75)">
                                                         <font><Font size="12.0" /></font>
                                                     </Label>
-                                                    <ComboBox fx:id="cbCategory"
-                                                              maxWidth="Infinity"
-                                                              promptText="-- Chọn danh mục --"
-                                                              style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px;"
-                                                              prefHeight="34.0" />
+                                                    <ComboBox fx:id="cbCategory" maxWidth="Infinity" prefHeight="34.0" promptText="-- Chọn danh mục --" style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px;" />
                                                 </VBox>
 
                                                 <VBox spacing="5.0">
-                                                    <Label text="Tình trạng *" textFill="#b0c4de">
+                                                    <Label text="Tình trạng *" textFill="rgba(226,255,0,0.75)">
                                                         <font><Font size="12.0" /></font>
                                                     </Label>
-                                                    <ComboBox fx:id="cbCondition"
-                                                              maxWidth="Infinity"
-                                                              promptText="-- Tình trạng --"
-                                                              style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px;"
-                                                              prefHeight="34.0" />
+                                                    <ComboBox fx:id="cbCondition" maxWidth="Infinity" prefHeight="34.0" promptText="-- Tình trạng --" style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px;" />
                                                 </VBox>
 
                                                 <VBox spacing="5.0">
-                                                    <Label text="Mô tả sản phẩm" textFill="#b0c4de">
+                                                    <Label text="Mô tả sản phẩm" textFill="rgba(226,255,0,0.75)">
                                                         <font><Font size="12.0" /></font>
                                                     </Label>
-                                                    <TextArea fx:id="txtDescription"
-                                                              promptText="Mô tả chi tiết về sản phẩm..."
-                                                              prefHeight="72.0"
-                                                              wrapText="true"
-                                                              style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px; -fx-padding: 8 12;" />
+                                                    <TextArea fx:id="txtDescription" prefHeight="72.0" promptText="Mô tả chi tiết về sản phẩm..." style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px; -fx-padding: 8 12;" wrapText="true" />
                                                 </VBox>
                                             </children>
                                         </VBox>
 
                                         <!-- Hình ảnh -->
-                                        <VBox spacing="10.0"
-                                              style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 16;">
+                                        <VBox spacing="10.0" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(226,255,0,0.28); -fx-background-radius: 12; -fx-border-radius: 12; -fx-border-width: 1.5; -fx-padding: 16;">
                                             <children>
                                                 <Label text="HÌNH ẢNH SẢN PHẨM" textFill="#e2ff00">
                                                     <font><Font name="System Bold" size="13.0" /></font>
                                                 </Label>
-                                                <VBox alignment="CENTER" spacing="6.0" prefHeight="100.0"
-                                                      style="-fx-background-color: rgba(255,255,255,0.07); -fx-border-color: rgba(255,255,255,0.30); -fx-border-width: 1.5; -fx-border-style: dashed; -fx-border-radius: 8; -fx-background-radius: 8; -fx-cursor: hand;"
-                                                      onMouseClicked="#handleChooseImage">
+                                                <VBox alignment="CENTER" onMouseClicked="#handleChooseImage" prefHeight="100.0" spacing="6.0" style="-fx-background-color: rgba(255,255,255,0.07); -fx-border-color: rgba(255,255,255,0.30); -fx-border-width: 1.5; -fx-border-style: dashed; -fx-border-radius: 8; -fx-background-radius: 8; -fx-cursor: hand;">
                                                     <children>
-                                                        <Label text="📷" style="-fx-font-size: 28px;" />
+                                                        <Label style="-fx-font-size: 28px;" text="📷" />
                                                         <Label text="Nhấn để chọn ảnh hoặc kéo thả vào đây" textFill="rgba(255,255,255,0.55)">
                                                             <font><Font size="12.0" /></font>
                                                         </Label>
@@ -180,55 +144,42 @@
                                 </VBox>
 
                                 <!-- CỘT PHẢI -->
-                                <VBox spacing="12.0" prefWidth="220.0">
+                                <VBox prefWidth="280.0" spacing="12.0">
                                     <children>
 
                                         <!-- Cài đặt đấu giá -->
-                                        <VBox spacing="12.0"
-                                              style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 16;">
+                                        <VBox spacing="12.0" style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(226,255,0,0.28); -fx-background-radius: 12; -fx-border-radius: 12; -fx-border-width: 1.5; -fx-padding: 16;">
                                             <children>
                                                 <Label text="CÀI ĐẶT ĐẤU GIÁ" textFill="#e2ff00">
                                                     <font><Font name="System Bold" size="13.0" /></font>
                                                 </Label>
 
                                                 <VBox spacing="5.0">
-                                                    <Label text="Giá khởi điểm (đ) *" textFill="#b0c4de">
+                                                    <Label text="Giá khởi điểm (đ) *" textFill="rgba(226,255,0,0.75)">
                                                         <font><Font size="12.0" /></font>
                                                     </Label>
-                                                    <TextField fx:id="txtStartPrice"
-                                                               promptText="VD: 1000000"
-                                                               style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px; -fx-padding: 0 12;"
-                                                               prefHeight="34.0" />
+                                                    <TextField fx:id="txtStartPrice" prefHeight="34.0" promptText="VD: 1000000" style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: rgba(226,255,0,0.40); -fx-border-width: 1.5; -fx-background-radius: 8; -fx-border-radius: 8; -fx-font-size: 13px; -fx-padding: 0 12;" />
                                                 </VBox>
 
                                                 <!-- Thời gian bắt đầu: hiển thị cố định = hiện tại -->
                                                 <VBox spacing="5.0">
-                                                    <Label text="Thời gian bắt đầu" textFill="#b0c4de">
+                                                    <Label text="Thời gian bắt đầu" textFill="rgba(226,255,0,0.75)">
                                                         <font><Font size="12.0" /></font>
                                                     </Label>
-                                                    <Label fx:id="lblStartTime" text="--/--/---- --:--:--"
-                                                           textFill="WHITE"
-                                                           style="-fx-background-color: rgba(255,255,255,0.12); -fx-background-radius: 5; -fx-padding: 8 12; -fx-font-size: 13px; -fx-font-weight: bold;"
-                                                           maxWidth="Infinity" />
+                                                    <Label fx:id="lblStartTime" maxWidth="Infinity" style="-fx-background-color: rgba(255,255,255,0.12); -fx-background-radius: 5; -fx-padding: 8 12; -fx-font-size: 13px; -fx-font-weight: bold;" text="--/--/---- --:--:--" textFill="WHITE" />
                                                 </VBox>
 
                                                 <!-- Thời lượng: giờ + phút -->
                                                 <VBox spacing="5.0">
-                                                    <Label text="Thời lượng *" textFill="#b0c4de">
+                                                    <Label text="Thời lượng *" textFill="rgba(226,255,0,0.75)">
                                                         <font><Font size="12.0" /></font>
                                                     </Label>
-                                                    <HBox spacing="6.0" alignment="CENTER_LEFT">
-                                                        <TextField fx:id="txtDurationHours"
-                                                                   promptText="0"
-                                                                   prefWidth="60.0" prefHeight="34.0"
-                                                                   style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px; -fx-alignment: CENTER;" />
+                                                    <HBox alignment="CENTER_LEFT" spacing="6.0">
+                                                        <TextField fx:id="txtDurationHours" prefHeight="34.0" prefWidth="75.0" promptText="0" style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px; -fx-alignment: CENTER;" />
                                                         <Label text="giờ" textFill="rgba(255,255,255,0.75)">
                                                             <font><Font size="12.0" /></font>
                                                         </Label>
-                                                        <TextField fx:id="txtDurationMinutes"
-                                                                   promptText="0"
-                                                                   prefWidth="60.0" prefHeight="34.0"
-                                                                   style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px; -fx-alignment: CENTER;" />
+                                                        <TextField fx:id="txtDurationMinutes" prefHeight="34.0" prefWidth="75.0" promptText="0" style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 5; -fx-font-size: 13px; -fx-alignment: CENTER;" />
                                                         <Label text="phút kể từ bây giờ" textFill="rgba(255,255,255,0.65)">
                                                             <font><Font size="12.0" /></font>
                                                         </Label>
@@ -241,25 +192,21 @@
                                         <!-- Lưu ý -->
                                         <VBox style="-fx-background-color: rgba(226,255,0,0.08); -fx-border-color: rgba(226,255,0,0.25); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10 14;">
                                             <children>
-                                                <Label text="Lưu ý: Sản phẩm sẽ được xét duyệt trước khi hiển thị công khai."
-                                                       textFill="rgba(255,255,255,0.75)" wrapText="true">
+                                                <Label text="Lưu ý: Sản phẩm sẽ được xét duyệt trước khi hiển thị công khai." textFill="rgba(255,255,255,0.75)" wrapText="true">
                                                     <font><Font size="12.0" /></font>
                                                 </Label>
                                             </children>
                                         </VBox>
 
                                         <!-- Lỗi validate -->
-                                        <Label fx:id="lblError" text="" textFill="#ff6b6b" wrapText="true" visible="false">
+                                        <Label fx:id="lblError" text="" textFill="#ff6b6b" visible="false" wrapText="true">
                                             <font><Font size="12.0" /></font>
                                         </Label>
 
                                         <Region VBox.vgrow="ALWAYS" />
 
                                         <!-- Nút đăng bán -->
-                                        <Button maxWidth="Infinity" mnemonicParsing="false"
-                                                onAction="#handleSubmit"
-                                                text="ĐĂNG BÁN NGAY"
-                                                style="-fx-background-color: #0d3d6e; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 12 14; -fx-border-color: rgba(255,255,255,0.25); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand; -fx-letter-spacing: 1px;" />
+                                        <Button maxWidth="Infinity" mnemonicParsing="false" onAction="#handleSubmit" style="-fx-background-color: #0d3d6e; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 12 14; -fx-border-color: rgba(255,255,255,0.25); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand; -fx-letter-spacing: 1px;" text="ĐĂNG BÁN NGAY" />
 
                                     </children>
                                 </VBox>

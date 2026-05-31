@@ -194,9 +194,10 @@ public class ProductSellerController {
 
     // ── Điều hướng ─────────────────────────────────────────────────────────────
 
-    @FXML private void handleGoBack()      { SceneManager.switchScene("UI.fxml"); }
-    @FXML private void handleGoHome()      { SceneManager.switchScene("UI.fxml"); }
-    @FXML private void handleGoMyAuction() { SceneManager.switchScene("UI.fxml"); }
+    @FXML private void handleGoBack()        { SceneManager.switchScene("UI.fxml"); }
+    @FXML private void handleGoHome()        { SceneManager.switchScene("UI.fxml"); }
+    @FXML private void handleGoMyAuction()   { SceneManager.switchScene("UI.fxml"); }
+    @FXML private void handleGoProfile()     { SceneManager.switchScene("Profile.fxml"); }
 
     @FXML
     private void handleLogout() {

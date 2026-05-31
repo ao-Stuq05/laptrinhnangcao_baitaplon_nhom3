@@ -4,6 +4,7 @@ import com.auction.client.SceneManager;
 import com.auction.client.network.ServerConnection;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Message;
+import com.auction.shared.model.User;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -29,6 +30,9 @@ public class UIController {
     // HBox chứa các nút số trang (inject động)
     @FXML private HBox   hboxPageButtons;
 
+    // Nút đăng bán — chỉ hiển thị với SELLER
+    @FXML private Button btnSellProduct;
+
     private static final int    ITEMS_PER_PAGE = 6; // 3 cột x 2 hàng
     private List<Auction>       allAuctions    = new ArrayList<>();
     private int                 currentPage    = 1;
@@ -37,6 +41,14 @@ public class UIController {
     public void initialize() {
         cbFilter.getItems().addAll("Tất cả", "Điện tử", "Nghệ thuật", "Xe cộ", "Đồng hồ & Trang sức");
         cbFilter.setValue("Tất cả");
+
+        // Kiểm tra role: chỉ SELLER mới thấy nút "+ Đăng bán SP"
+        User currentUser = ServerConnection.getInstance().getCurrentUser();
+        boolean isSeller = currentUser != null && "SELLER".equals(currentUser.getRole());
+        if (btnSellProduct != null) {
+            btnSellProduct.setVisible(isSeller);
+            btnSellProduct.setManaged(isSeller);
+        }
 
         ServerConnection.getInstance().setAuctionListCallback(this::displayAuctions);
 

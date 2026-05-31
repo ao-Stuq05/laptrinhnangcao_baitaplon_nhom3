@@ -7,6 +7,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
@@ -39,6 +40,7 @@ public class ProductController {
     @FXML private Label     lblBalance;
     @FXML private HBox      paneBalanceInline;
     @FXML private Label     lblBalanceInline;
+    @FXML private Button    btnSellProduct;   // chỉ visible với SELLER
 
     private Auction  currentAuction;
     private Timeline countdown;
@@ -111,6 +113,12 @@ public class ProductController {
             updateBalanceUI(bidder.getBalance(), bidder.getFrozenBalance());
         } else {
             hide(paneBalance); hide(paneBalanceInline);
+        }
+        // Ẩn nút đăng bán nếu không phải Seller
+        boolean isSeller = user != null && "SELLER".equals(user.getRole());
+        if (btnSellProduct != null) {
+            btnSellProduct.setVisible(isSeller);
+            btnSellProduct.setManaged(isSeller);
         }
     }
 
@@ -349,6 +357,8 @@ public class ProductController {
     // ── Điều hướng ────────────────────────────────────────────────────────────
     @FXML private void handleGoHome()  { cleanup(); SceneManager.switchScene("UI.fxml"); }
     @FXML private void handleGoBack()  { cleanup(); SceneManager.switchScene("UI.fxml"); }
+    @FXML private void handleGoProductSeller() { cleanup(); SceneManager.switchScene("ProductSeller.fxml"); }
+    @FXML private void handleGoProfile()       { cleanup(); SceneManager.switchScene("Profile.fxml"); }
     @FXML private void handleLogout() {
         cleanup();
         try { ServerConnection.getInstance().sendMessage(new Message("LOGOUT", null)); }

@@ -6,10 +6,10 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="620.0" prefWidth="820.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.RegisterController">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="700.0" prefWidth="960.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.RegisterController">
     <children>
 
-        <ImageView fitHeight="620.0" fitWidth="820.0" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <ImageView fitHeight="700.0" fitWidth="960.0" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <image>
                 <Image url="@/assets/background.jpg" />
             </image>
@@ -33,7 +33,7 @@
                     </children>
                 </VBox>
 
-                <VBox alignment="CENTER" prefWidth="815.0" spacing="14.0" style="-fx-background-color: rgba(255,255,255,0.08); -fx-border-color: rgba(255,255,255,0.15); -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-width: 1; -fx-padding: 28 40 28 40;">
+                <VBox alignment="CENTER" prefWidth="955.0" spacing="14.0" style="-fx-background-color: rgba(255,255,255,0.08); -fx-border-color: rgba(226,255,0,0.28); -fx-background-radius: 12; -fx-border-radius: 12; -fx-border-width: 1.5; -fx-padding: 28 40 28 40;">
                     <children>
 
                         <Label text="ĐĂNG KÍ TÀI KHOẢN">
@@ -61,53 +61,53 @@
                         <!-- Họ Tên -->
                         <VBox alignment="CENTER" spacing="5.0">
                             <children>
-                                <Label prefWidth="335.0" text="Họ Tên" textFill="WHITE">
+                                <Label prefWidth="395.0" text="Họ Tên" textFill="WHITE">
                                     <font><Font name="Arial Bold Italic" size="14.0" /></font>
                                 </Label>
-                                <TextField fx:id="txtName" maxWidth="340.0" prefHeight="43.0" prefWidth="340.0" promptText="Nhập họ và tên" />
+                                <TextField fx:id="txtName" maxWidth="400.0" prefHeight="43.0" prefWidth="400.0" promptText="Nhập họ và tên" />
                             </children>
                         </VBox>
 
                         <!-- Email -->
                         <VBox alignment="CENTER" spacing="5.0">
                             <children>
-                                <Label prefWidth="338.0" text="Email" textFill="WHITE">
+                                <Label prefWidth="395.0" text="Email" textFill="WHITE">
                                     <font><Font name="Arial Bold Italic" size="14.0" /></font>
                                 </Label>
-                                <TextField fx:id="txtEmail" maxWidth="340.0" prefHeight="42.0" promptText="Nhập email"
-                                           style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-border-radius: 5; -fx-background-radius: 5; -fx-font-size: 14px; -fx-padding: 0 12;" />
+                                <TextField fx:id="txtEmail" maxWidth="400.0" prefHeight="42.0" promptText="Nhập email"
+                                           style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: rgba(226,255,0,0.40); -fx-border-width: 1.5; -fx-border-radius: 8; -fx-background-radius: 8; -fx-font-size: 14px; -fx-padding: 0 12;" />
                             </children>
                         </VBox>
 
                         <!-- Mật Khẩu -->
                         <VBox alignment="CENTER" spacing="5.0">
                             <children>
-                                <Label prefWidth="336.0" text="Mật Khẩu" textFill="WHITE">
+                                <Label prefWidth="395.0" text="Mật Khẩu" textFill="WHITE">
                                     <font><Font name="Arial Bold Italic" size="14.0" /></font>
                                 </Label>
-                                <PasswordField fx:id="txtPassword" maxWidth="340.0" prefHeight="42.0" promptText="Nhập mật khẩu" />
+                                <PasswordField fx:id="txtPassword" maxWidth="400.0" prefHeight="42.0" promptText="Nhập mật khẩu" />
                             </children>
                         </VBox>
 
                         <!-- Xác Nhận Mật Khẩu -->
                         <VBox alignment="CENTER" spacing="5.0">
                             <children>
-                                <Label prefWidth="337.0" text="Xác Nhận Mật Khẩu" textFill="WHITE">
+                                <Label prefWidth="395.0" text="Xác Nhận Mật Khẩu" textFill="WHITE">
                                     <font><Font name="Arial Bold Italic" size="14.0" /></font>
                                 </Label>
-                                <PasswordField fx:id="txtConfirmPassword" maxWidth="340.0" prefHeight="42.0" promptText="Nhập lại mật khẩu" />
+                                <PasswordField fx:id="txtConfirmPassword" maxWidth="400.0" prefHeight="42.0" promptText="Nhập lại mật khẩu" />
                             </children>
                         </VBox>
 
                         <!-- Vai Trò -->
                         <VBox alignment="CENTER" spacing="5.0">
                             <children>
-                                <Label prefWidth="337.0" text="Vai Trò" textFill="WHITE">
+                                <Label prefWidth="395.0" text="Vai Trò" textFill="WHITE">
                                     <font><Font name="Arial Bold Italic" size="14.0" /></font>
                                 </Label>
-                                <ComboBox fx:id="cmbRole" maxWidth="340.0" prefHeight="42.0" prefWidth="340.0"
+                                <ComboBox fx:id="cmbRole" maxWidth="400.0" prefHeight="42.0" prefWidth="400.0"
                                           promptText="Chọn vai trò"
-                                          style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-radius: 5; -fx-background-radius: 5; -fx-font-size: 14px;" />
+                                          style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: rgba(226,255,0,0.40); -fx-border-width: 1.5; -fx-border-radius: 8; -fx-background-radius: 8; -fx-font-size: 14px;" />
                             </children>
                         </VBox>
 
@@ -117,7 +117,7 @@
                         </Label>
 
                         <!-- Nút Đăng Ký -->
-                        <Button onAction="#handleRegister" mnemonicParsing="false" prefHeight="42.0" prefWidth="340.0"
+                        <Button onAction="#handleRegister" mnemonicParsing="false" prefHeight="42.0" prefWidth="400.0"
                                 style="-fx-background-color: #0d3d6e; -fx-text-fill: white; -fx-cursor: hand;" text="ĐĂNG KÍ">
                             <font><Font name="System Bold" size="14.0" /></font>
                         </Button>
