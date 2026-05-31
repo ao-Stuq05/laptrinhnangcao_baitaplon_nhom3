@@ -138,6 +138,7 @@ public class ProfileController {
     @FXML private Label         lblProfileMsg;
     @FXML private Button        btnEdit;
     @FXML private Button btnSellProduct;
+    @FXML private Button btnMyAuction;
 
     @FXML private Button                         btnTabSell;
     @FXML private Button                         btnTabBuy;
@@ -219,13 +220,16 @@ public class ProfileController {
                 lblRole.setStyle(badgeStyle("#60b4ff", "rgba(50,130,200,0.18)", "rgba(50,130,200,0.40)"));
             }
         }
-        // Ẩn nút Đăng bán SP nếu không phải Seller
+        // Ẩn nút Đăng bán SP và Đấu giá tôi nếu không phải Seller
+        boolean isSeller = "SELLER".equals(user.getRole());
         if (btnSellProduct != null) {
-            boolean isSeller = "SELLER".equals(user.getRole());
             btnSellProduct.setVisible(isSeller);
             btnSellProduct.setManaged(isSeller);
         }
-
+        if (btnMyAuction != null) {
+            btnMyAuction.setVisible(isSeller);
+            btnMyAuction.setManaged(isSeller);
+        }
         // Số dư — chỉ Bidder mới có balance
         if (user instanceof Bidder bidder) {
             updateBalanceLabel(bidder.getBalance());
@@ -507,7 +511,6 @@ public class ProfileController {
 
     @FXML private void handleGoBack()          { SceneManager.switchScene("UI.fxml"); }
     @FXML private void handleGoHome()          { SceneManager.switchScene("UI.fxml"); }
-    @FXML private void handleGoMyAuction()     { SceneManager.switchScene("UI.fxml"); }
     @FXML private void handleGoProductSeller() { SceneManager.switchScene("ProductSeller.fxml"); }
 
     @FXML
@@ -527,7 +530,9 @@ public class ProfileController {
         }
         SceneManager.switchScene("login.fxml");
     }
-
+    @FXML private void handleGoMyAuction() {
+        SceneManager.switchScene("MyAuctions.fxml");
+    }
     // ── Inner class: Row model cho TableView ──────────────────────────────────
 
     public static class AuctionRow {
@@ -546,4 +551,5 @@ public class ProfileController {
             this.endDate     = endDate;
         }
     }
+
 }

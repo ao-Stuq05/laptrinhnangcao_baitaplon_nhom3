@@ -189,7 +189,7 @@ public class UIController {
     }
 
     @FXML private void handleGoMyAuction() {
-        System.out.println("Chuyển sang màn hình đấu giá tôi");
+        SceneManager.switchScene("MyAuctions.fxml");
     }
 
     @FXML private void handleGoProductSeller() {
