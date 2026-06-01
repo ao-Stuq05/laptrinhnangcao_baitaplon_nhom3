@@ -87,10 +87,17 @@ public class DatabaseManager {
                 is_active TINYINT(1) NOT NULL DEFAULT 1,
                 shop_name VARCHAR(100),
                 balance DOUBLE NOT NULL DEFAULT 0.0,
+                frozen_balance DOUBLE NOT NULL DEFAULT 0.0,
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL
             ) ENGINE=InnoDB;
         """);
+        // Migration: thêm frozen_balance nếu bảng đã tồn tại từ phiên bản cũ
+        try {
+            stmt.execute("ALTER TABLE users ADD COLUMN frozen_balance DOUBLE NOT NULL DEFAULT 0.0");
+        } catch (java.sql.SQLException ignored) {
+            // Cột đã tồn tại → bỏ qua
+        }
 
         // 2. Bảng items
         stmt.execute("""

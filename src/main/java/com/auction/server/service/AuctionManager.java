@@ -28,6 +28,13 @@ public class AuctionManager {
     private final Map<String, Auction> auctions;
     private final Map<String, ScheduledFuture<?>> scheduledClosures;
 
+    /** Callback được AuctionServer đăng ký để xử lý DB + broadcast khi phiên đóng */
+    private java.util.function.Consumer<Auction> onAuctionClosedCallback;
+
+    public void setOnAuctionClosedCallback(java.util.function.Consumer<Auction> cb) {
+        this.onAuctionClosedCallback = cb;
+    }
+
     // ── Task 1: Đăng ký + lên lịch đóng phiên ────────────────
 
     public void registerAuction(Auction auction) {
@@ -77,6 +84,11 @@ public class AuctionManager {
         System.out.println("[Manager] Phiên " + auctionId + " → FINISHED");
 
         determineWinner(a);
+
+        // Gọi callback để AuctionServer xử lý DB + broadcast + tài chính
+        if (onAuctionClosedCallback != null) {
+            onAuctionClosedCallback.accept(a);
+        }
     }
 
     private void determineWinner(Auction auction) {

@@ -73,6 +73,7 @@ public class ProductController {
         ServerConnection conn = ServerConnection.getInstance();
         conn.setBidUpdateCallback(this::onNewBidReceived);
         conn.setAuctionClosedCallback(this::onAuctionClosed);
+        conn.setOutbidCallback(this::onOutbid);
 
         // Hiện nút Đăng bán SP và Đấu giá tôi nếu là Seller
         User currentUser = ServerConnection.getInstance().getCurrentUser();
@@ -231,36 +232,89 @@ public class ProductController {
         if (top5.isEmpty()) {
             Label empty = new Label("Chưa có ai đặt giá");
             empty.setTextFill(Color.web("rgba(255,255,255,0.45)"));
+            empty.setFont(Font.font("System", 13));
             bidHistoryBox.getChildren().add(empty);
             return;
         }
 
+        // Tiêu đề cột
+        HBox header = new HBox();
+        header.setStyle("-fx-padding: 0 2 6 2;");
+        Label hRank  = new Label("Hạng");
+        hRank.setTextFill(Color.web("rgba(226,255,0,0.60)"));
+        hRank.setFont(Font.font("System", 11));
+        hRank.setPrefWidth(40);
+        Label hName  = new Label("Người đặt");
+        hName.setTextFill(Color.web("rgba(226,255,0,0.60)"));
+        hName.setFont(Font.font("System", 11));
+        HBox.setHgrow(hName, Priority.ALWAYS);
+        Label hAmt   = new Label("Giá cao nhất");
+        hAmt.setTextFill(Color.web("rgba(226,255,0,0.60)"));
+        hAmt.setFont(Font.font("System", 11));
+        header.getChildren().addAll(hRank, hName, hAmt);
+        bidHistoryBox.getChildren().add(header);
+
         String[] rankIcons = {"🥇", "🥈", "🥉", "4.", "5."};
+        String[] rankBg    = {
+            "rgba(234,179,8,0.10)", "rgba(192,192,192,0.08)",
+            "rgba(205,127,50,0.08)", "rgba(255,255,255,0.04)", "rgba(255,255,255,0.04)"
+        };
         int rank = 0;
         for (Map.Entry<String, Double> entry : top5.entrySet()) {
             String username = entry.getKey().split("\\|")[1];
             double amount   = entry.getValue();
 
             HBox row = new HBox();
-            row.setStyle("-fx-border-color: transparent transparent rgba(255,255,255,0.10) transparent;" +
-                    "-fx-border-width: 1; -fx-padding: 6 2;");
+            row.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: 6; " +
+                "-fx-border-color: rgba(255,255,255,0.08); -fx-border-radius: 6; " +
+                "-fx-border-width: 1; -fx-padding: 7 8; -fx-spacing: 8;",
+                rankBg[rank]));
 
-            Label lblName = new Label(rankIcons[rank] + "  " + username);
-            lblName.setTextFill(rank == 0 ? Color.web("#eab308")
+            // Rank icon
+            Label lblRank = new Label(rankIcons[rank]);
+            lblRank.setFont(Font.font("System", 14));
+            lblRank.setPrefWidth(28);
+
+            // Username
+            Color nameColor = rank == 0 ? Color.web("#eab308")
                     : rank == 1 ? Color.web("#c0c0c0")
-                    : rank == 2 ? Color.web("#cd7f32") : Color.WHITE);
+                    : rank == 2 ? Color.web("#cd7f32") : Color.WHITE;
+            Label lblName = new Label(username);
+            lblName.setTextFill(nameColor);
             lblName.setFont(Font.font("System", FontWeight.BOLD, 13));
+            HBox.setHgrow(lblName, Priority.ALWAYS);
 
-            Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
-
-            Label lblAmt = new Label(fmt(amount) + "đ");
+            // Amount
+            Label lblAmt = new Label(fmt(amount) + " đ");
             lblAmt.setTextFill(rank == 0 ? Color.web("#e2ff00") : Color.web("#00ff88"));
             lblAmt.setFont(Font.font("System", FontWeight.BOLD, 13));
 
-            row.getChildren().addAll(lblName, spacer, lblAmt);
+            row.getChildren().addAll(lblRank, lblName, lblAmt);
             bidHistoryBox.getChildren().add(row);
             rank++;
+        }
+
+        // Hiển thị tổng số lượt đặt giá
+        int totalBids = currentAuction != null && currentAuction.getBids() != null
+                ? currentAuction.getBids().size() : top5.size();
+        Label lblTotal = new Label("Tổng cộng " + totalBids + " lượt đặt giá");
+        lblTotal.setTextFill(Color.web("rgba(255,255,255,0.40)"));
+        lblTotal.setFont(Font.font("System", 11));
+        lblTotal.setStyle("-fx-padding: 6 2 0 2;");
+        bidHistoryBox.getChildren().add(lblTotal);
+    }
+
+    // ── Callback: bị người khác vượt giá ─────────────────────────────────────
+    private void onOutbid(String auctionId) {
+        if (currentAuction == null || !currentAuction.getId().equals(auctionId)) return;
+        // Số dư đã được cập nhật trong ServerConnection, chỉ cần refresh UI
+        User user = ServerConnection.getInstance().getCurrentUser();
+        if (user instanceof Bidder bidder) {
+            Platform.runLater(() -> {
+                updateBalanceUI(bidder.getBalance(), bidder.getFrozenBalance());
+                showBidMsg("Bạn vừa bị vượt giá! Tiền đặt cọc đã được hoàn trả.", true);
+            });
         }
     }
 
@@ -270,6 +324,8 @@ public class ProductController {
 
         // Cập nhật currentPrice trong auction in-memory (KHÔNG gọi placeBid — tránh duplicate)
         currentAuction.setCurrentPriceOnly(tx.getBidAmount());
+        // Thêm vào lịch sử để đếm tổng lượt bid chính xác
+        currentAuction.injectBid(tx);
 
         Platform.runLater(() -> {
             // Cập nhật giá
@@ -386,6 +442,7 @@ public class ProductController {
         ServerConnection conn = ServerConnection.getInstance();
         conn.setBidUpdateCallback(null);
         conn.setAuctionClosedCallback(null);
+        conn.setOutbidCallback(null);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

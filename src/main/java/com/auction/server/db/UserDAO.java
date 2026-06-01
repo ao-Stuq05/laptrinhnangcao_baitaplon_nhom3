@@ -119,6 +119,29 @@ public class UserDAO {
         }
     }
 
+    /** Cập nhật frozen_balance cho bidder */
+    public void updateFrozenBalance(String bidderId, double newFrozen) throws SQLException {
+        String sql = "UPDATE users SET frozen_balance = ?, updated_at = ? WHERE id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDouble(1, newFrozen);
+            ps.setTimestamp(2, Timestamp.valueOf(java.time.LocalDateTime.now()));
+            ps.setString(3, bidderId);
+            ps.executeUpdate();
+        }
+    }
+
+    /** Cập nhật cả balance và frozen_balance cùng lúc (dùng khi kết thúc phiên) */
+    public void updateBalanceAndFrozen(String bidderId, double newBalance, double newFrozen) throws SQLException {
+        String sql = "UPDATE users SET balance = ?, frozen_balance = ?, updated_at = ? WHERE id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDouble(1, newBalance);
+            ps.setDouble(2, newFrozen);
+            ps.setTimestamp(3, Timestamp.valueOf(java.time.LocalDateTime.now()));
+            ps.setString(4, bidderId);
+            ps.executeUpdate();
+        }
+    }
+
     /** MỚI: Cập nhật email và password của user từ màn hình Hồ sơ */
     public void updateProfile(String userId, String newEmail, String newPassword) throws SQLException {
         if (newPassword != null && !newPassword.isEmpty()) {

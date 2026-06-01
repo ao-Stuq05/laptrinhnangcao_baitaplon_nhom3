@@ -25,6 +25,8 @@ public class ServerConnection {
     private Consumer<List<BidTransaction>> myBidCallback;
     private Consumer<User>                 profileUpdateCallback;
     private Consumer<Auction>              auctionClosedCallback;
+    /** Callback khi bị người khác vượt giá — nhận auctionId để ProductController refresh balance */
+    private Consumer<String>               outbidCallback;
 
     private ServerConnection() {}
     public static ServerConnection getInstance() {
@@ -41,6 +43,7 @@ public class ServerConnection {
     public void setMyBidCallback         (Consumer<List<BidTransaction>> cb)  { myBidCallback          = cb; }
     public void setProfileUpdateCallback (Consumer<User> cb)                  { profileUpdateCallback  = cb; }
     public void setAuctionClosedCallback (Consumer<Auction> cb)               { auctionClosedCallback  = cb; }
+    public void setOutbidCallback        (Consumer<String> cb)                { outbidCallback         = cb; }
 
     public void connect(String host, int port) throws IOException {
         if (socket == null || socket.isClosed()) {
@@ -125,6 +128,31 @@ public class ServerConnection {
             case "PLACE_BID_FAILED" ->
                 Platform.runLater(() -> alert("Đặt giá thất bại",
                         (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
+
+            // ── Bị vượt giá: giải phóng frozen balance ───────────────────────
+            case "OUTBID_NOTIFY" -> {
+                @SuppressWarnings("unchecked")
+                java.util.HashMap<String, Object> p =
+                        (java.util.HashMap<String, Object>) msg.getPayload();
+                String bidderId  = (String) p.get("bidderId");
+                double newBalance = (double) p.get("newBalance");
+                double newFrozen  = (double) p.get("newFrozen");
+                if (currentUser instanceof Bidder bidder
+                        && bidder.getId().equals(bidderId)) {
+                    bidder.setBalance(newBalance);
+                    bidder.setFrozenBalance(newFrozen);
+                    // Xóa frozen entry cho phiên này trong map nội bộ
+                    String auctionId = (String) p.get("auctionId");
+                    bidder.unfreezeForAuction(auctionId);
+                    if (bidUpdateCallback != null) {
+                        // Tái dùng callback để ProductController cập nhật UI số dư
+                        // (tx=null được xử lý an toàn — chỉ cần trigger refresh balance)
+                    }
+                    Platform.runLater(() -> {
+                        if (outbidCallback != null) outbidCallback.accept(auctionId);
+                    });
+                }
+            }
 
             // ── Nạp tiền ─────────────────────────────────────────────────────
             case "TOP_UP_SUCCESS" -> {
