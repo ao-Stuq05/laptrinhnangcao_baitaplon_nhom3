@@ -5,7 +5,8 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity"
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity"
+            minHeight="-Infinity" minWidth="-Infinity"
             prefHeight="680.0" prefWidth="1100.0"
             xmlns="http://javafx.com/javafx/17.0.12"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -35,10 +36,10 @@
                         <VBox alignment="CENTER" spacing="4.0"
                               style="-fx-padding: 20 10 16 10; -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 0 0 1 0;">
                             <children>
-                                <Label maxWidth="205.0" text="🏆 ĐẤU GIÁ" textFill="#e2ff00">
+                                <Label text="🏆 ĐẤU GIÁ" textFill="#e2ff00">
                                     <font><Font name="System Bold" size="17.0" /></font>
                                 </Label>
-                                <Label maxWidth="205.0" text="TRỰC TUYẾN" textFill="rgba(255,255,255,0.70)">
+                                <Label text="TRỰC TUYẾN" textFill="rgba(255,255,255,0.70)">
                                     <font><Font name="System Bold" size="11.0" /></font>
                                 </Label>
                             </children>
@@ -48,23 +49,20 @@
                         <VBox spacing="4.0" style="-fx-padding: 12 8 12 8;">
                             <children>
                                 <Button maxWidth="Infinity" mnemonicParsing="false"
-                                        onAction="#handleGoHome"
-                                        text="Home"
+                                        onAction="#handleGoHome" text="Home"
                                         style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" />
 
                                 <Button maxWidth="Infinity" mnemonicParsing="false"
-                                        onAction="#handleGoProfile"
-                                        text="Hồ sơ"
+                                        onAction="#handleGoProfile" text="Hồ sơ"
                                         style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" />
 
-                                <!-- Đấu giá tôi — active -->
+                                <!-- Active -->
                                 <Button maxWidth="Infinity" mnemonicParsing="false"
                                         text="Đấu giá tôi"
                                         style="-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-background-radius: 6; -fx-cursor: hand;" />
 
                                 <Button maxWidth="Infinity" mnemonicParsing="false"
-                                        onAction="#handleGoCreateAuction"
-                                        text="+ Đăng bán SP"
+                                        onAction="#handleGoCreateAuction" text="+ Đăng bán SP"
                                         style="-fx-background-color: rgba(226,255,0,0.10); -fx-text-fill: #e2ff00; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: rgba(226,255,0,0.45); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" />
                             </children>
                         </VBox>
@@ -75,8 +73,7 @@
                         <VBox style="-fx-padding: 12 8 16 8; -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 1 0 0 0;">
                             <children>
                                 <Button maxWidth="Infinity" mnemonicParsing="false"
-                                        onAction="#handleLogout"
-                                        text="ĐĂNG XUẤT"
+                                        onAction="#handleLogout" text="ĐĂNG XUẤT"
                                         style="-fx-background-color: rgba(180,30,30,0.55); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 10 14; -fx-border-color: rgba(255,255,255,0.15); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;" />
                             </children>
                         </VBox>
@@ -85,7 +82,7 @@
                 </VBox>
 
                 <!-- ===== NỘI DUNG CHÍNH ===== -->
-                <VBox spacing="14.0" style="-fx-padding: 20 20 20 20;" HBox.hgrow="ALWAYS">
+                <VBox spacing="12.0" style="-fx-padding: 20 20 12 20;" HBox.hgrow="ALWAYS">
                     <children>
 
                         <!-- Header -->
@@ -95,20 +92,19 @@
                                     <font><Font name="System Bold" size="18.0" /></font>
                                 </Label>
                                 <Region HBox.hgrow="ALWAYS" />
-                                <!-- Lọc trạng thái -->
                                 <ComboBox fx:id="cbStatusFilter" prefHeight="34.0" prefWidth="160.0"
                                           promptText="Trạng thái"
                                           style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 6; -fx-font-size: 13px;" />
                             </children>
                         </HBox>
 
-                        <!-- Thống kê nhanh -->
+                        <!-- 3 ô thống kê -->
                         <HBox spacing="12.0">
                             <children>
                                 <VBox alignment="CENTER" spacing="4.0" prefWidth="160.0"
                                       style="-fx-background-color: rgba(255,255,255,0.10); -fx-border-color: rgba(255,255,255,0.18); -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 12;">
                                     <children>
-                                        <Label fx:id="lblTotalCount" text="0"  textFill="#e2ff00">
+                                        <Label fx:id="lblTotalCount" text="0" textFill="#e2ff00">
                                             <font><Font name="System Bold" size="22.0" /></font>
                                         </Label>
                                         <Label text="Tổng phiên" textFill="rgba(255,255,255,0.65)">
@@ -141,14 +137,29 @@
                             </children>
                         </HBox>
 
-                        <!-- Grid card phiên đấu giá -->
-                        <GridPane fx:id="gridMyAuctions" hgap="14.0" vgap="14.0" VBox.vgrow="ALWAYS">
-                            <columnConstraints>
-                                <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
-                                <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
-                                <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
-                            </columnConstraints>
-                        </GridPane>
+                        <!--
+                            ScrollPane bao GridPane:
+                            - fitToWidth="true"  : card tự co theo chiều ngang
+                            - VBox.vgrow="ALWAYS": chiếm hết chiều cao còn lại sau header + stats + pagination
+                            - style transparent  : không vẽ viền/nền mặc định của ScrollPane
+                        -->
+                        <ScrollPane fitToWidth="true" fitToHeight="false"
+                                    hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                                    VBox.vgrow="ALWAYS"
+                                    style="-fx-background: transparent; -fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 0;">
+                            <GridPane fx:id="gridMyAuctions" hgap="14.0" vgap="14.0"
+                                      maxWidth="Infinity" maxHeight="Infinity"
+                                      style="-fx-padding: 2 2 2 2;">
+                                <columnConstraints>
+                                    <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
+                                    <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
+                                    <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
+                                </columnConstraints>
+                                <rowConstraints>
+                                    <RowConstraints vgrow="ALWAYS" fillHeight="true" />
+                                </rowConstraints>
+                            </GridPane>
+                        </ScrollPane>
 
                         <!-- PAGINATION -->
                         <HBox alignment="CENTER" spacing="8.0">
@@ -158,7 +169,7 @@
                                         visible="false" managed="false"
                                         style="-fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: white; -fx-border-color: rgba(255,255,255,0.20); -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand; -fx-min-width: 32; -fx-min-height: 32;" />
                                 <HBox fx:id="hboxPageButtons" spacing="6.0" alignment="CENTER"
-                                      visible="false" managed="false"/>
+                                      visible="false" managed="false" />
                                 <Button fx:id="btnNext" mnemonicParsing="false" text="»"
                                         onAction="#handleNext"
                                         visible="false" managed="false"

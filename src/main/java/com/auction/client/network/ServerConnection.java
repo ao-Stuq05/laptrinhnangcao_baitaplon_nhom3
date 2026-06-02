@@ -80,8 +80,8 @@ public class ServerConnection {
                 Platform.runLater(() -> SceneManager.switchScene("UI.fxml"));
             }
             case "LOGIN_FAILED" ->
-                Platform.runLater(() -> alert("Đăng nhập thất bại",
-                        (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
+                    Platform.runLater(() -> alert("Đăng nhập thất bại",
+                            (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
 
             case "REGISTER_SUCCESS" -> {
                 User saved = (User) msg.getPayload();
@@ -93,8 +93,8 @@ public class ServerConnection {
                 });
             }
             case "REGISTER_FAILED" ->
-                Platform.runLater(() -> alert("Đăng ký thất bại",
-                        (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
+                    Platform.runLater(() -> alert("Đăng ký thất bại",
+                            (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
 
             case "CREATE_AUCTION_SUCCESS" -> {
                 Auction a = (Auction) msg.getPayload();
@@ -106,8 +106,30 @@ public class ServerConnection {
                 });
             }
             case "CREATE_AUCTION_FAILED" ->
-                Platform.runLater(() -> alert("Đăng bán thất bại",
-                        (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
+                    Platform.runLater(() -> alert("Đăng bán thất bại",
+                            (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
+
+            case "UPDATE_AUCTION_SUCCESS" -> {
+                Auction a = (Auction) msg.getPayload();
+                Platform.runLater(() -> {
+                    alert("Cập nhật thành công",
+                            "\"" + a.getItem().getName() + "\" đã được cập nhật!",
+                            javafx.scene.control.Alert.AlertType.INFORMATION);
+                    SceneManager.switchScene("MyAuctions.fxml");
+                });
+            }
+            case "UPDATE_AUCTION_FAILED" ->
+                    Platform.runLater(() -> alert("Cập nhật thất bại",
+                            (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
+
+            case "CANCEL_AUCTION_SUCCESS" ->
+                    Platform.runLater(() -> alert("Hủy phiên thành công",
+                            "Phiên đấu giá đã được hủy.",
+                            javafx.scene.control.Alert.AlertType.INFORMATION));
+
+            case "CANCEL_AUCTION_FAILED" ->
+                    Platform.runLater(() -> alert("Hủy phiên thất bại",
+                            (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
 
             case "GET_AUCTIONS_SUCCESS" -> {
                 @SuppressWarnings("unchecked") List<Auction> list = (List<Auction>) msg.getPayload();
@@ -126,8 +148,8 @@ public class ServerConnection {
                 if (bidUpdateCallback != null) bidUpdateCallback.accept(tx);
             }
             case "PLACE_BID_FAILED" ->
-                Platform.runLater(() -> alert("Đặt giá thất bại",
-                        (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
+                    Platform.runLater(() -> alert("Đặt giá thất bại",
+                            (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
 
             // ── Bị vượt giá: giải phóng frozen balance ───────────────────────
             case "OUTBID_NOTIFY" -> {
@@ -161,8 +183,8 @@ public class ServerConnection {
                 if (topUpCallback != null) Platform.runLater(() -> topUpCallback.accept(newBal));
             }
             case "TOP_UP_FAILED" ->
-                Platform.runLater(() -> alert("Nạp tiền thất bại",
-                        (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
+                    Platform.runLater(() -> alert("Nạp tiền thất bại",
+                            (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
 
             // ── Lịch sử ──────────────────────────────────────────────────────
             case "GET_MY_AUCTIONS_SUCCESS" -> {
@@ -181,8 +203,8 @@ public class ServerConnection {
                     Platform.runLater(() -> profileUpdateCallback.accept(currentUser));
             }
             case "UPDATE_PROFILE_FAILED" ->
-                Platform.runLater(() -> alert("Cập nhật thất bại",
-                        (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
+                    Platform.runLater(() -> alert("Cập nhật thất bại",
+                            (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
 
             // ── Phiên kết thúc (từ AuctionManager broadcast) ─────────────────
             case "AUCTION_CLOSED" -> {

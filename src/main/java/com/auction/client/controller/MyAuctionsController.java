@@ -4,6 +4,7 @@ import com.auction.client.SceneManager;
 import com.auction.client.network.ServerConnection;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.AuctionStatus;
+import com.auction.shared.model.BidTransaction;
 import com.auction.shared.model.Message;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -14,6 +15,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,10 +34,12 @@ public class MyAuctionsController {
     @FXML private Label            lblEndedCount;
 
     // ── State ──────────────────────────────────────────────────────────────────
-    private static final int ITEMS_PER_PAGE = 6;
+    private static final int ITEMS_PER_PAGE = 3;   // 3 card / trang, 1 hàng ngang
     private List<Auction>    allAuctions    = new ArrayList<>();
     private List<Auction>    filtered       = new ArrayList<>();
     private int              currentPage    = 1;
+
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
     // ── initialize ─────────────────────────────────────────────────────────────
     @FXML
@@ -44,10 +48,8 @@ public class MyAuctionsController {
         cbStatusFilter.setValue("Tất cả");
         cbStatusFilter.setOnAction(e -> applyFilter());
 
-        // Đăng ký callback nhận data từ server
         ServerConnection.getInstance().setMyAuctionCallback(this::onAuctionsLoaded);
 
-        // Gửi yêu cầu lấy danh sách phiên của Seller hiện tại
         try {
             ServerConnection.getInstance().sendMessage(new Message("GET_MY_AUCTIONS", null));
         } catch (Exception e) {
@@ -68,11 +70,11 @@ public class MyAuctionsController {
     private void updateStats() {
         long active = allAuctions.stream()
                 .filter(a -> a.getStatus() == AuctionStatus.OPEN
-                          || a.getStatus() == AuctionStatus.RUNNING)
+                        || a.getStatus() == AuctionStatus.RUNNING)
                 .count();
         long ended = allAuctions.stream()
                 .filter(a -> a.getStatus() == AuctionStatus.FINISHED
-                          || a.getStatus() == AuctionStatus.CANCELLED)
+                        || a.getStatus() == AuctionStatus.CANCELLED)
                 .count();
 
         lblTotalCount.setText(String.valueOf(allAuctions.size()));
@@ -86,7 +88,7 @@ public class MyAuctionsController {
         filtered = switch (selected) {
             case "Đang chạy"   -> allAuctions.stream()
                     .filter(a -> a.getStatus() == AuctionStatus.OPEN
-                              || a.getStatus() == AuctionStatus.RUNNING)
+                            || a.getStatus() == AuctionStatus.RUNNING)
                     .collect(Collectors.toList());
             case "Đã kết thúc" -> allAuctions.stream()
                     .filter(a -> a.getStatus() == AuctionStatus.FINISHED)
@@ -101,9 +103,10 @@ public class MyAuctionsController {
         renderPageButtons();
     }
 
-    // ── Render card ────────────────────────────────────────────────────────────
+    // ── Render page ────────────────────────────────────────────────────────────
     private void renderPage(int page) {
         gridMyAuctions.getChildren().clear();
+        gridMyAuctions.getRowConstraints().clear();
 
         if (filtered.isEmpty()) {
             Label empty = new Label("Chưa có phiên đấu giá nào.");
@@ -115,117 +118,257 @@ public class MyAuctionsController {
         int from = (page - 1) * ITEMS_PER_PAGE;
         int to   = Math.min(from + ITEMS_PER_PAGE, filtered.size());
 
+        // Thêm RowConstraints động cho mỗi hàng
+        int rowCount = (int) Math.ceil((double)(to - from) / 3);
+        for (int r = 0; r < rowCount; r++) {
+            RowConstraints rc = new RowConstraints();
+            rc.setVgrow(Priority.ALWAYS);
+            rc.setFillHeight(true);
+            gridMyAuctions.getRowConstraints().add(rc);
+        }
+
         int col = 0, row = 0;
         for (int i = from; i < to; i++) {
             VBox card = buildCard(filtered.get(i));
+            GridPane.setFillWidth(card, true);
+            GridPane.setFillHeight(card, true);
+            GridPane.setHgrow(card, Priority.ALWAYS);
+            GridPane.setVgrow(card, Priority.ALWAYS);
             gridMyAuctions.add(card, col, row);
             col++;
             if (col == 3) { col = 0; row++; }
         }
     }
 
+    // ── Build card (ĐÃ PHÓNG TO THEO CÁCH 2) ───────────────────────────────────
     private VBox buildCard(Auction auction) {
-        VBox card = new VBox(8);
-        card.setStyle("-fx-background-color: rgba(255,255,255,0.10);" +
-                "-fx-border-color: rgba(255,255,255,0.18);" +
-                "-fx-background-radius: 8; -fx-border-radius: 8;" +
-                "-fx-border-width: 1; -fx-padding: 12;");
+        // Tăng spacing nội bộ từ 8 -> 14 giúp các thành phần thoáng hơn
+        VBox card = new VBox(14);
+        // Nâng tầm chiều cao tối thiểu từ 320 -> 460 để card to và dài hơn hẳn
+        card.setMinHeight(460);
+        card.setMaxHeight(Double.MAX_VALUE);
+        card.setMaxWidth(Double.MAX_VALUE);
+        card.setStyle(
+                "-fx-background-color: rgba(255,255,255,0.08);" +
+                        "-fx-border-color: rgba(255,255,255,0.16);" +
+                        "-fx-background-radius: 12; -fx-border-radius: 12;" + // Bo tròn góc mượt hơn (8 -> 12)
+                        "-fx-border-width: 1; -fx-padding: 20;"); // Tăng padding viền trong từ 12 -> 20 giúp ruột rộng rãi
 
-        // Tên sản phẩm
+        // ── Tên sản phẩm (Phóng to font chữ) ──────────────────
         Label lblName = new Label(auction.getItem().getName());
         lblName.setTextFill(Color.WHITE);
-        lblName.setFont(Font.font("System", FontWeight.BOLD, 13));
+        lblName.setFont(Font.font("System", FontWeight.BOLD, 17)); // Tăng size từ 13 -> 17
         lblName.setWrapText(true);
 
-        // Trạng thái
+        // ── Danh mục badge (Làm tag to hơn) ───────────────────
+        String rawCat   = auction.getItem().getCategory();
+        String category = (rawCat != null && !rawCat.isBlank()) ? rawCat : "Khác";
+
+        Label lblCategory = new Label("🏷 " + formatCategory(category));
+        lblCategory.setFont(Font.font("System", FontWeight.NORMAL, 12)); // Tăng size từ 11 -> 12
+        lblCategory.setTextFill(categoryTextColor(category));
+        lblCategory.setStyle(
+                "-fx-background-color: " + categoryBg(category)    + ";" +
+                        "-fx-border-color: "     + categoryBorder(category) + ";" +
+                        "-fx-border-width: 1; -fx-border-radius: 6;" +
+                        "-fx-background-radius: 6; -fx-padding: 4 12 4 12;"); // Tăng padding của badge cho nịnh mắt
+
+        // ── Trạng thái ────────────────────────────────────────
         Label lblStatus = buildStatusLabel(auction.getStatus());
 
-        // Giá hiện tại
+        // ── Giá hiện tại ──────────────────────────────────────
         Label lblPrice = new Label(String.format("Giá HT: %,.0fđ", auction.getCurrentPrice()));
         lblPrice.setTextFill(Color.WHITE);
+        lblPrice.setFont(Font.font("System", FontWeight.BOLD, 14)); // Tăng nét và kích thước chữ giá tiền
 
-        // Người đang dẫn đầu
-        String leaderText = auction.getLeadingBidder() != null
-                ? "Dẫn đầu: " + auction.getLeadingBidder().getUsername()
-                : "Chưa có ai đặt giá";
-        Label lblLeader = new Label(leaderText);
-        lblLeader.setTextFill(Color.LIGHTYELLOW);
-        lblLeader.setFont(Font.font(11));
-
-        // Thời gian còn lại
+        // ── Thời gian còn lại ─────────────────────────────────
         long minutesLeft = ChronoUnit.MINUTES.between(LocalDateTime.now(), auction.getEndTime());
         String timeText = minutesLeft > 0
                 ? String.format("Còn: %d giờ %d phút", minutesLeft / 60, minutesLeft % 60)
                 : "Đã kết thúc";
         Label lblTime = new Label(timeText);
         lblTime.setTextFill(minutesLeft > 0 ? Color.LIGHTGREEN : Color.SALMON);
+        lblTime.setFont(Font.font("System", FontWeight.NORMAL, 13)); // Tăng size chữ thời gian
 
-        // 2 nút: Chỉnh sửa & Xóa
-        HBox btnRow = new HBox(8);
+        // ── Lịch sử đặt giá — chỉ hiện khi có bid ────────────
+        List<BidTransaction> bids = auction.getBids();
+        boolean hasBids = bids != null && !bids.isEmpty();
+        System.out.println(">>> " + auction.getItem().getName()
+                + " bids=" + (bids == null ? "null" : bids.size()));
+
+        // spacer đẩy btnRow xuống đáy card
+        Region spacer = new Region();
+        VBox.setVgrow(spacer, Priority.ALWAYS);
+
+        // ── Nút Sửa & Hủy phiên (Làm nút dày dặn và to hơn) ───
+        HBox btnRow = new HBox(10); // Tăng khoảng cách giữa 2 nút lên 10
         Button btnEdit   = new Button("✏ Chỉnh sửa");
-        Button btnDelete = new Button("🗑 Xóa");
+        Button btnCancel = new Button("⊘ Hủy phiên");
 
         btnEdit.setMaxWidth(Double.MAX_VALUE);
-        btnDelete.setMaxWidth(Double.MAX_VALUE);
+        btnCancel.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(btnEdit,   Priority.ALWAYS);
-        HBox.setHgrow(btnDelete, Priority.ALWAYS);
+        HBox.setHgrow(btnCancel, Priority.ALWAYS);
 
-        btnEdit.setStyle("-fx-background-color: #0d3d6e; -fx-text-fill: white;" +
-                "-fx-font-size: 11px; -fx-border-color: rgba(255,255,255,0.25);" +
-                "-fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5; -fx-cursor: hand;");
-        btnDelete.setStyle("-fx-background-color: rgba(180,30,30,0.55); -fx-text-fill: white;" +
-                "-fx-font-size: 11px; -fx-border-color: rgba(255,255,255,0.20);" +
-                "-fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5; -fx-cursor: hand;");
+        // Nâng size chữ nút từ 11px -> 13px và thêm padding dọc 10px để nút dày dặn, dễ bấm
+        btnEdit.setStyle(
+                "-fx-background-color: #0d3d6e; -fx-text-fill: white;" +
+                        "-fx-font-size: 13px; -fx-font-weight: bold; -fx-border-color: rgba(255,255,255,0.25);" +
+                        "-fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;" +
+                        "-fx-cursor: hand; -fx-padding: 10 0 10 0;");
+        btnCancel.setStyle(
+                "-fx-background-color: rgba(180,30,30,0.55); -fx-text-fill: white;" +
+                        "-fx-font-size: 13px; -fx-font-weight: bold; -fx-border-color: rgba(255,255,255,0.20);" +
+                        "-fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;" +
+                        "-fx-cursor: hand; -fx-padding: 10 0 10 0;");
 
-        // Khóa nút nếu phiên đã kết thúc/hủy
         boolean isActive = auction.getStatus() == AuctionStatus.OPEN
-                        || auction.getStatus() == AuctionStatus.RUNNING;
+                || auction.getStatus() == AuctionStatus.RUNNING;
         btnEdit.setDisable(!isActive);
-        btnDelete.setDisable(!isActive);
+        btnCancel.setDisable(!isActive);
 
         btnEdit.setOnAction(e -> handleEdit(auction));
-        btnDelete.setOnAction(e -> handleDelete(auction));
+        btnCancel.setOnAction(e -> handleCancel(auction));
 
-        btnRow.getChildren().addAll(btnEdit, btnDelete);
-        card.getChildren().addAll(lblName, lblStatus, lblPrice, lblLeader, lblTime, btnRow);
+        btnRow.getChildren().addAll(btnEdit, btnCancel);
+
+        // Nội dung cố định
+        card.getChildren().addAll(lblName, lblCategory, lblStatus, lblPrice, lblTime);
+
+        // Lịch sử chỉ xuất hiện khi có dữ liệu
+        if (hasBids) {
+            Separator sep = new Separator();
+            sep.setStyle("-fx-background-color: rgba(255,255,255,0.15);");
+
+            Label lblHistoryTitle = new Label("LỊCH SỬ ĐẶT GIÁ");
+            lblHistoryTitle.setTextFill(Color.web("rgba(255,255,255,0.50)"));
+            lblHistoryTitle.setFont(Font.font("System", FontWeight.BOLD, 12)); // Tăng từ 10 -> 12
+
+            card.getChildren().addAll(sep, lblHistoryTitle, buildHistoryBox(bids));
+        }
+
+        // spacer + nút luôn ở cuối card
+        card.getChildren().addAll(spacer, btnRow);
         return card;
     }
 
-    // Badge trạng thái màu sắc khác nhau
+    // ── Build vùng lịch sử đặt giá (Tăng cỡ chữ dòng lịch sử) ──────────────────
+    private VBox buildHistoryBox(List<BidTransaction> bids) {
+        VBox box = new VBox(6); // Tăng khoảng cách dòng lịch sử từ 3 -> 6
+
+        // Hiển thị tối đa 3 bid mới nhất
+        int start = Math.max(0, bids.size() - 3);
+        for (int i = bids.size() - 1; i >= start; i--) {
+            BidTransaction bid = bids.get(i);
+
+            HBox row = new HBox(6);
+            row.setStyle(
+                    "-fx-border-color: rgba(255,255,255,0.08);" +
+                            "-fx-border-width: 0 0 1 0; -fx-padding: 4 0 4 0;"); // Rộng rãi hơn chút
+
+            Label lblUser = new Label(bid.getBidder().getUsername());
+            lblUser.setTextFill(Color.web("rgba(255,255,255,0.75)"));
+            lblUser.setFont(Font.font(12)); // Tăng font từ 10 -> 12
+            HBox.setHgrow(lblUser, Priority.ALWAYS);
+            lblUser.setMaxWidth(Double.MAX_VALUE);
+
+            Label lblAmount = new Label(String.format("%,.0fđ", bid.getBidAmount()));
+            lblAmount.setTextFill(Color.web("#00ccff"));
+            lblAmount.setFont(Font.font("System", FontWeight.BOLD, 12)); // Tăng font từ 10 -> 12
+
+            Label lblTime = new Label(bid.getTimestamp().format(TIME_FMT));
+            lblTime.setTextFill(Color.web("rgba(255,255,255,0.35)"));
+            lblTime.setFont(Font.font(11)); // Tăng font từ 9 -> 11
+
+            row.getChildren().addAll(lblUser, lblAmount, lblTime);
+            box.getChildren().add(row);
+        }
+        return box;
+    }
+
+    // ── Badge trạng thái ──────────────────────────────────────────────────────
     private Label buildStatusLabel(AuctionStatus status) {
         Label lbl = new Label();
         switch (status) {
-            case OPEN     -> { lbl.setText("● Đang mở");    lbl.setTextFill(Color.LIGHTGREEN); }
-            case RUNNING  -> { lbl.setText("● Đang chạy");  lbl.setTextFill(Color.web("#00ccff")); }
-            case FINISHED -> { lbl.setText("● Đã kết thúc"); lbl.setTextFill(Color.SALMON); }
-            case CANCELLED-> { lbl.setText("● Đã hủy");     lbl.setTextFill(Color.GRAY); }
-            default       -> { lbl.setText("● Không rõ");   lbl.setTextFill(Color.WHITE); }
+            case OPEN      -> { lbl.setText("● Đang mở");     lbl.setTextFill(Color.LIGHTGREEN); }
+            case RUNNING   -> { lbl.setText("● Đang chạy");   lbl.setTextFill(Color.web("#00ccff")); }
+            case FINISHED  -> { lbl.setText("● Đã kết thúc"); lbl.setTextFill(Color.SALMON); }
+            case CANCELLED -> { lbl.setText("● Đã hủy");      lbl.setTextFill(Color.GRAY); }
+            default        -> { lbl.setText("● Không rõ");    lbl.setTextFill(Color.WHITE); }
         }
-        lbl.setFont(Font.font("System", FontWeight.BOLD, 11));
+        lbl.setFont(Font.font("System", FontWeight.BOLD, 13)); // Tăng cỡ chữ từ 11 -> 13
         return lbl;
     }
 
-    // ── Xử lý Chỉnh sửa & Xóa ────────────────────────────────────────────────
+    // ── Helpers màu danh mục ──────────────────────────────────────────────────
+    private String formatCategory(String cat) {
+        return switch (cat.toUpperCase()) {
+            case "VEHICLE"     -> "Xe cộ";
+            case "ART"         -> "Nghệ thuật";
+            case "ELECTRONICS" -> "Công nghệ";
+            case "FASHION"     -> "Thời trang";
+            case "FURNITURE"   -> "Nội thất";
+            case "JEWELRY"     -> "Trang sức";
+            default            -> cat;
+        };
+    }
+
+    private Color categoryTextColor(String cat) {
+        return switch (cat.toUpperCase()) {
+            case "VEHICLE"     -> Color.web("#00ccff");
+            case "ART"         -> Color.web("#bf8eff");
+            case "ELECTRONICS" -> Color.web("#00ff88");
+            case "FASHION"     -> Color.web("#ff80c0");
+            case "FURNITURE"   -> Color.web("#ffb347");
+            case "JEWELRY"     -> Color.web("#ffe87a");
+            default            -> Color.web("rgba(255,255,255,0.70)");
+        };
+    }
+
+    private String categoryBg(String cat) {
+        return switch (cat.toUpperCase()) {
+            case "VEHICLE"     -> "rgba(0,200,255,0.12)";
+            case "ART"         -> "rgba(160,100,255,0.12)";
+            case "ELECTRONICS" -> "rgba(0,255,120,0.10)";
+            case "FASHION"     -> "rgba(255,100,180,0.12)";
+            case "FURNITURE"   -> "rgba(255,160,50,0.12)";
+            case "JEWELRY"     -> "rgba(255,230,80,0.12)";
+            default            -> "rgba(255,255,255,0.08)";
+        };
+    }
+
+    private String categoryBorder(String cat) {
+        return switch (cat.toUpperCase()) {
+            case "VEHICLE"     -> "rgba(0,200,255,0.30)";
+            case "ART"         -> "rgba(160,100,255,0.30)";
+            case "ELECTRONICS" -> "rgba(0,255,120,0.28)";
+            case "FASHION"     -> "rgba(255,100,180,0.30)";
+            case "FURNITURE"   -> "rgba(255,160,50,0.30)";
+            case "JEWELRY"     -> "rgba(255,230,80,0.30)";
+            default            -> "rgba(255,255,255,0.20)";
+        };
+    }
+
+    // ── Xử lý Sửa & Hủy phiên ────────────────────────────────────────────────
     private void handleEdit(Auction auction) {
-        // Chuyển sang màn hình chỉnh sửa, truyền auction theo
         SceneManager.switchScene("CreateAuction.fxml", auction);
     }
 
-    private void handleDelete(Auction auction) {
+    private void handleCancel(Auction auction) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                "Bạn chắc chắn muốn xóa phiên \"" + auction.getItem().getName() + "\"?",
+                "Hủy phiên \"" + auction.getItem().getName() + "\"?\nHành động này không thể hoàn tác.",
                 ButtonType.YES, ButtonType.NO);
-        confirm.setHeaderText("Xác nhận xóa");
+        confirm.setHeaderText("Xác nhận hủy phiên");
         confirm.showAndWait().ifPresent(btn -> {
             if (btn == ButtonType.YES) {
                 try {
                     ServerConnection.getInstance()
-                            .sendMessage(new Message("DELETE_AUCTION", auction.getId()));
-                    allAuctions.remove(auction);
+                            .sendMessage(new Message("CANCEL_AUCTION", auction.getId()));
+                    auction.setStatus(AuctionStatus.CANCELLED);
                     updateStats();
                     applyFilter();
                 } catch (Exception e) {
-                    System.out.println("⚠ Không thể xóa phiên: " + e.getMessage());
+                    System.out.println("⚠ Không thể hủy phiên: " + e.getMessage());
                 }
             }
         });
@@ -245,8 +388,14 @@ public class MyAuctionsController {
             final int pageNum = i;
             Button btn = new Button(String.valueOf(i));
             btn.setStyle((i == currentPage)
-                    ? "-fx-background-color: #0d3d6e; -fx-text-fill: white; -fx-border-color: rgba(255,255,255,0.25); -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand; -fx-min-width: 32; -fx-min-height: 32;"
-                    : "-fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: white; -fx-border-color: rgba(255,255,255,0.20); -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand; -fx-min-width: 32; -fx-min-height: 32;");
+                    ? "-fx-background-color: #0d3d6e; -fx-text-fill: white;" +
+                    "-fx-border-color: rgba(255,255,255,0.25); -fx-border-width: 1;" +
+                    "-fx-border-radius: 4; -fx-background-radius: 4;" +
+                    "-fx-cursor: hand; -fx-min-width: 32; -fx-min-height: 32;"
+                    : "-fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: white;" +
+                    "-fx-border-color: rgba(255,255,255,0.20); -fx-border-width: 1;" +
+                    "-fx-border-radius: 4; -fx-background-radius: 4;" +
+                    "-fx-cursor: hand; -fx-min-width: 32; -fx-min-height: 32;");
             btn.setOnAction(e -> goToPage(pageNum));
             hboxPageButtons.getChildren().add(btn);
         }

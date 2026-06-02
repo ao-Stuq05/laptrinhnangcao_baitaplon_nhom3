@@ -2,6 +2,7 @@ package com.auction.client.controller;
 
 import com.auction.client.SceneManager;
 import com.auction.client.network.ServerConnection;
+import com.auction.shared.model.Auction;
 import com.auction.shared.model.Message;
 import com.auction.shared.model.Seller;
 import com.auction.shared.model.User;
@@ -39,9 +40,13 @@ public class CreateAuctionController {
 
     @FXML private Label      lblImageHint;
     @FXML private Label      lblError;
+    @FXML private Button     btnSubmit;
 
     /** Đường dẫn ảnh người dùng đã chọn */
     private File selectedImageFile;
+
+    /** Nếu != null → đang ở chế độ chỉnh sửa phiên */
+    private Auction editingAuction = null;
 
     // ── Khởi tạo ──────────────────────────────────────────────────────────────
 
@@ -78,7 +83,43 @@ public class CreateAuctionController {
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
         lblStartTime.setText(LocalDateTime.now().format(fmt));
 
-        // txtDurationHours và txtDurationMinutes không cần khởi tạo gì thêm
+        // ── Nhận auction từ SceneManager nếu đang chỉnh sửa ─────────────────
+        Object data = SceneManager.getAndClearData();
+        if (data instanceof Auction auction) {
+            editingAuction = auction;
+            populateForm(auction);
+        }
+    }
+
+    /** Điền sẵn dữ liệu auction vào form khi chỉnh sửa */
+    private void populateForm(Auction auction) {
+        txtProductName.setText(auction.getItem().getName());
+        txtDescription.setText(auction.getItem().getDescription());
+        txtStartPrice.setText(String.valueOf((long) auction.getCurrentPrice()));
+
+        // Category: map ngược từ enum về tên hiển thị trong ComboBox
+        String rawCat = auction.getItem().getCategory();
+        if (rawCat != null) {
+            String displayCat = switch (rawCat.toUpperCase()) {
+                case "VEHICLE"     -> "Xe cộ";
+                case "ELECTRONICS" -> "Điện tử";
+                case "ART"         -> "Nghệ thuật";
+                case "JEWELRY"     -> "Đồng hồ & Trang sức";
+                default            -> "Khác";
+            };
+            cbCategory.setValue(displayCat);
+        }
+
+        // Tính thời gian còn lại (giờ/phút) từ endTime
+        long totalMinutes = java.time.temporal.ChronoUnit.MINUTES.between(
+                LocalDateTime.now(), auction.getEndTime());
+        if (totalMinutes > 0) {
+            txtDurationHours.setText(String.valueOf(totalMinutes / 60));
+            txtDurationMinutes.setText(String.valueOf(totalMinutes % 60));
+        }
+
+        // Đổi text nút và tiêu đề sang chế độ chỉnh sửa
+        if (btnSubmit != null) btnSubmit.setText("CẬP NHẬT PHIÊN");
     }
 
     // ── Xử lý chọn ảnh ────────────────────────────────────────────────────────
@@ -99,7 +140,7 @@ public class CreateAuctionController {
         }
     }
 
-    // ── Xử lý đăng bán ────────────────────────────────────────────────────────
+    // ── Xử lý đăng bán / cập nhật ────────────────────────────────────────────
 
     @FXML
     private void handleSubmit() {
@@ -112,7 +153,8 @@ public class CreateAuctionController {
 
         if (name.isEmpty()) { showError("Vui lòng nhập tên sản phẩm!"); return; }
         if (category == null) { showError("Vui lòng chọn danh mục!"); return; }
-        if (condition == null) { showError("Vui lòng chọn tình trạng sản phẩm!"); return; }
+        // Chỉ bắt buộc condition khi tạo mới — khi edit, condition không lưu trong DB nên có thể null
+        if (condition == null && editingAuction == null) { showError("Vui lòng chọn tình trạng sản phẩm!"); return; }
         if (priceText.isEmpty()) { showError("Vui lòng nhập giá khởi điểm!"); return; }
 
         double startPrice;
@@ -150,14 +192,12 @@ public class CreateAuctionController {
 
         hideError();
 
-        // Tính startDateTime (= ngay lúc submit) và endDateTime
         LocalDateTime startDateTime = LocalDateTime.now();
         LocalDateTime endDateTime   = startDateTime
                 .plusHours(durationHours)
                 .plusMinutes(durationMinutes);
         DateTimeFormatter isoFmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
-        // --- Đóng gói payload và gửi lên server ---
         try {
             HashMap<String, Object> payload = new HashMap<>();
             payload.put("name",          name);
@@ -178,12 +218,16 @@ public class CreateAuctionController {
                 }
             }
 
-            Message msg = new Message("CREATE_AUCTION", payload);
-            ServerConnection.getInstance().sendMessage(msg);
-            System.out.println(">>> Đã gửi yêu cầu ĐĂNG BÁN lên Server!");
-
-            // ✅ KHÔNG chuyển màn hình ở đây — ServerConnection xử lý
-            // sau khi nhận CREATE_AUCTION_SUCCESS từ server
+            if (editingAuction != null) {
+                // ── Chế độ chỉnh sửa: gửi UPDATE_AUCTION kèm auctionId ──────
+                payload.put("auctionId", editingAuction.getId());
+                ServerConnection.getInstance().sendMessage(new Message("UPDATE_AUCTION", payload));
+                System.out.println(">>> Đã gửi yêu cầu CẬP NHẬT phiên: " + editingAuction.getId());
+            } else {
+                // ── Chế độ tạo mới ──────────────────────────────────────────
+                ServerConnection.getInstance().sendMessage(new Message("CREATE_AUCTION", payload));
+                System.out.println(">>> Đã gửi yêu cầu ĐĂNG BÁN lên Server!");
+            }
 
         } catch (Exception e) {
             showError("Không thể kết nối tới server!");

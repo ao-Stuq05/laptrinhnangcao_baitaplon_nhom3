@@ -76,16 +76,19 @@ public class ItemDAO {
 
     public void update(Item item) throws SQLException {
         String sql = """
-            UPDATE items 
-            SET name = ?, description = ?, base_price = ?, updated_at = ?
+            UPDATE items
+            SET name = ?, description = ?, base_price = ?, category = ?,
+                image_data = ?, updated_at = ?
             WHERE id = ?
         """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, item.getName());
             ps.setString(2, item.getDescription());
             ps.setDouble(3, item.getBasePrice());
-            ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
-            ps.setString(5, item.getId());
+            ps.setString(4, item.getCategory());
+            ps.setString(5, item.getImageBase64());
+            ps.setTimestamp(6, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setString(7, item.getId());
             ps.executeUpdate();
             System.out.println("[ItemDAO] Đã cập nhật item: " + item.getId());
         }
