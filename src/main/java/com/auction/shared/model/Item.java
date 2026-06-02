@@ -38,6 +38,8 @@ public abstract class Item extends Entity implements Serializable {
     public double getBasePrice() { return basePrice; }
     public Seller getSeller() { return seller; }
     public void setDescription(String description) { this.description = description; }
+    public void setName(String name)               { this.name = name; }
+    public void setBasePrice(double basePrice)     { this.basePrice = basePrice; }
     public String getImageBase64() { return imageBase64; }
     public void setImageBase64(String imageBase64) { this.imageBase64 = imageBase64; }
 }

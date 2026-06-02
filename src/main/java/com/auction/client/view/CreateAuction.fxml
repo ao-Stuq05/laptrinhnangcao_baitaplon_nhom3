@@ -216,7 +216,7 @@
                                         <Region VBox.vgrow="ALWAYS" />
 
                                         <!-- Nút đăng bán -->
-                                        <Button maxWidth="Infinity" mnemonicParsing="false" onAction="#handleSubmit" style="-fx-background-color: #0d3d6e; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 12 14; -fx-border-color: rgba(255,255,255,0.25); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand; -fx-letter-spacing: 1px;" text="ĐĂNG BÁN NGAY" />
+                                        <Button fx:id="btnSubmit" maxWidth="Infinity" mnemonicParsing="false" onAction="#handleSubmit" style="-fx-background-color: #0d3d6e; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 12 14; -fx-border-color: rgba(255,255,255,0.25); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand; -fx-letter-spacing: 1px;" text="ĐĂNG BÁN NGAY" />
 
                                     </children>
                                 </VBox>

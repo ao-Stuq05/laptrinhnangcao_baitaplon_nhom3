@@ -168,6 +168,7 @@ public class Auction extends Entity implements Serializable {
     // ── Getters ───────────────────────────────────────────────
 
     public Item getItem()                { return item; }
+    public void setItem(Item item)       { this.item = item; }
     public Seller getSeller()            { return seller; }
     public AuctionStatus getStatus()     { return status; }
     public double getCurrentPrice()      { return currentPrice; }
