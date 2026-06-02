@@ -122,6 +122,43 @@ public class AuctionServer {
         // 3. Broadcast AUCTION_CLOSED tới tất cả client
         broadcast(new Message("AUCTION_CLOSED", auction), null);
         System.out.println("[Server] Đã broadcast AUCTION_CLOSED: " + auction.getId());
+
+        // 4. Gửi thông báo riêng cho Seller và Winner (nếu có)
+        try {
+            // Seller notification
+            User seller = auction.getSeller();
+            if (seller != null) {
+                for (ClientHandler c : connectedClients) {
+                    User cu = c.getCurrentUser();
+                    if (cu != null && cu instanceof Seller && cu.getId().equals(seller.getId())) {
+                        try {
+                            c.sendMessage(new Message("AUCTION_SOLD", auction));
+                        } catch (IOException e) {
+                            System.err.println("[Notify] Không gửi được AUCTION_SOLD tới seller: " + e.getMessage());
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Winner notification
+            Bidder winner = auction.getWinner();
+            if (winner != null) {
+                for (ClientHandler c : connectedClients) {
+                    User cu = c.getCurrentUser();
+                    if (cu != null && cu instanceof Bidder && cu.getId().equals(winner.getId())) {
+                        try {
+                            c.sendMessage(new Message("AUCTION_WON", auction));
+                        } catch (IOException e) {
+                            System.err.println("[Notify] Không gửi được AUCTION_WON tới winner: " + e.getMessage());
+                        }
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[Notify] Lỗi khi gửi thông báo riêng: " + e.getMessage());
+        }
     }
 
     /** Broadcast 1 message tới tất cả client đang kết nối (sender=null → gửi tất cả) */
@@ -148,6 +185,8 @@ public class AuctionServer {
         private final BidTransactionDAO bidTransactionDAO = new BidTransactionDAO();
 
         public ClientHandler(Socket socket) { this.clientSocket = socket; }
+
+        public User getCurrentUser() { return currentUser; }
 
         public synchronized void sendMessage(Message msg) throws IOException {
             if (out != null) { out.writeObject(msg); out.flush(); }

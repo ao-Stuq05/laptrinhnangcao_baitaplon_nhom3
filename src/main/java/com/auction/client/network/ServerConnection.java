@@ -227,6 +227,38 @@ public class ServerConnection {
                     auctionClosedCallback.accept(closed);
             }
 
+            // ── Thông báo dành riêng: bạn thắng phiên ────────────────────────
+            case "AUCTION_WON" -> {
+                Auction a = (Auction) msg.getPayload();
+                Platform.runLater(() -> {
+                    alert("Bạn đã thắng!",
+                            "Bạn đã thắng phiên đấu giá: " + a.getItem().getName() +
+                                    " với mức giá " + String.format("%.0f đ", a.getCurrentPrice()),
+                            javafx.scene.control.Alert.AlertType.INFORMATION);
+                    // Callback để cập nhật UI nếu cần
+                    if (auctionClosedCallback != null) auctionClosedCallback.accept(a);
+                });
+            }
+
+            // ── Thông báo dành riêng: seller được thông báo sản phẩm đã bán
+            case "AUCTION_SOLD" -> {
+                Auction a = (Auction) msg.getPayload();
+                Platform.runLater(() -> {
+                    alert("Sản phẩm đã bán",
+                            "Phiên đấu giá của bạn đã kết thúc. " +
+                                    (a.getWinner() != null ? "Người thắng: " + a.getWinner().getUsername() : "Không có người thắng"),
+                            javafx.scene.control.Alert.AlertType.INFORMATION);
+                    // Nếu seller đang xem trang quản lý, refresh danh sách
+                    if (myAuctionCallback != null) {
+                        try {
+                            // Yêu cầu server lấy lại danh sách my auctions
+                            // Client có thể gọi API GET_MY_AUCTIONS khi cần; gửi request
+                            sendMessage(new Message("GET_MY_AUCTIONS", null));
+                        } catch (Exception ignored) {}
+                    }
+                });
+            }
+
             default -> System.out.println("[Client] Không xử lý: " + msg.getType());
         }
     }

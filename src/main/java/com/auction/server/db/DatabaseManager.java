@@ -11,12 +11,11 @@ import java.sql.Statement;
  */
 public class DatabaseManager {
     // Cấu hình kết nối - Lưu ý: dbname được tách ra để hỗ trợ tự động tạo DB nếu chưa có
-    private static final String DB_HOST = "jdbc:mysql://localhost:3306/";
+    private static final String DB_HOST = "jdbc:mysql://192.168.2.244";
     private static final String DB_NAME = "auction_db";
     private static final String DB_OPTIONS = "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
-
-    private static final String USER = "root";
-    private static final String PASS = "";
+    private static final String USER = "auction_db";
+    private static final String PASS = "12052007";
 
     private static DatabaseManager instance;
     private Connection connection;
