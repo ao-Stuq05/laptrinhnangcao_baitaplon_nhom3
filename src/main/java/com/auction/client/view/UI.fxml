@@ -6,13 +6,13 @@
 <?import javafx.scene.text.*?>
 
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity"
-            prefHeight="680.0" prefWidth="1100.0"
+            prefHeight="600.0" prefWidth="900.0"
             xmlns="http://javafx.com/javafx/17.0.12"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.auction.client.controller.UIController">
     <children>
 
-        <ImageView fitHeight="680.0" fitWidth="1100.0" opacity="0.82"
+        <ImageView fitHeight="600.0" fitWidth="900.0" opacity="0.82"
                    pickOnBounds="true" preserveRatio="false"
                    AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
                    AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
@@ -26,21 +26,20 @@
             <children>
 
                 <!-- SIDEBAR -->
-                <VBox prefWidth="160.0" minWidth="160.0"
-                      style="-fx-background-color: rgba(0,0,0,0.35); -fx-border-color: rgba(255,255,255,0.12); -fx-border-width: 0 1 0 0;">
+                <VBox prefWidth="160.0"
+                      style="-fx-background-color: rgba(0,0,0,0.25); -fx-border-color: rgba(255,255,255,0.12); -fx-border-width: 0 1 0 0;">
                     <children>
 
                         <!-- Logo -->
-                        <VBox alignment="CENTER" spacing="4.0" style="-fx-padding: 20 10 16 10; -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 0 0 1 0;">
+                        <VBox alignment="CENTER" spacing="6.0"
+                              style="-fx-padding: 24 12 20 12; -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 0 0 1 0;">
                             <children>
-                                <Label maxWidth="205.0" text="🏆 ĐẤU GIÁ" textFill="#e2ff00">
-                                    <font><Font name="System Bold" size="17.0" /></font>
-                                </Label>
-                                <Label maxWidth="205.0" text="TRỰC TUYẾN" textFill="rgba(255,255,255,0.70)">
-                                    <font><Font name="System Bold" size="11.0" /></font>
+                                <Label text="Ten dau gia" textFill="#fffbfb">
+                                    <font><Font name="System Bold" size="21.0" /></font>
                                 </Label>
                             </children>
                         </VBox>
+
                         <!-- Số dư (chỉ Bidder) -->
                         <VBox fx:id="paneBalance" alignment="CENTER" spacing="2.0"
                               style="-fx-padding: 10 10 10 10; -fx-background-color: rgba(226,255,0,0.06); -fx-border-color: rgba(226,255,0,0.25); -fx-border-width: 0 0 1 0;"
@@ -58,28 +57,30 @@
                         <!-- Nav buttons -->
                         <VBox spacing="4.0" style="-fx-padding: 12 8 12 8;">
                             <children>
-                                <Button maxWidth="Infinity" mnemonicParsing="false"
+                                <Button maxWidth="Infinity" mnemonicParsing="false" opacity="0.87"
                                         text="Home"
-                                        style="-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-background-radius: 6; -fx-cursor: hand;" />
-
-                                <Button maxWidth="Infinity" mnemonicParsing="false"
-                                        onAction="#handleGoProfile"
-                                        text="Hồ sơ"
-                                        style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" />
+                                        style="-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: transparent; -fx-background-radius: 6; -fx-cursor: hand;" />
 
                                 <Button fx:id="btnMyAuction" maxWidth="Infinity" mnemonicParsing="false"
                                         onAction="#handleGoMyAuction"
-                                        text="Đấu giá tôi"
-                                        style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" />
+                                        text="Đấu giá tôi" textFill="WHITE"
+                                        style="-fx-background-color: transparent; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14;">
+                                    <font><Font name="System Bold" size="12.0" /></font>
+                                </Button>
 
                                 <!-- Đăng bán SP — ẩn nếu không phải Seller -->
                                 <Button fx:id="btnSellProduct" maxWidth="Infinity" mnemonicParsing="false"
-                                        onAction="#handleGoCreateAuction"
+                                        onAction="#handleGoProductSeller"
                                         text="+ Đăng bán SP"
                                         visible="false" managed="false"
-                                        style="-fx-background-color: rgba(226,255,0,0.10); -fx-text-fill: #e2ff00; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: rgba(226,255,0,0.45); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" />
+                                        style="-fx-background-color: rgba(226,255,0,0.10); -fx-text-fill: #e2ff00; -fx-font-weight: bold; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-border-color: rgba(226,255,0,0.45); -fx-border-width: 0 0 0 3; -fx-background-radius: 0 6 6 0; -fx-cursor: hand;" />
 
-
+                                <Button maxWidth="Infinity" mnemonicParsing="false"
+                                        onAction="#handleGoProfile"
+                                        text="Hồ sơ" textFill="WHITE"
+                                        style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 12px; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;">
+                                    <font><Font name="System Bold" size="12.0" /></font>
+                                </Button>
                             </children>
                         </VBox>
 
