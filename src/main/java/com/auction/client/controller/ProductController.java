@@ -7,6 +7,10 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -19,15 +23,18 @@ import javafx.util.Duration;
 
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 public class ProductController {
 
+    // ── FXML fields ──────────────────────────────────────────────────────────
     @FXML private ImageView imgProduct;
     @FXML private Label     lblProductName;
     @FXML private Label     lblCategory;
     @FXML private Label     lblStartPrice;
+    @FXML private Label     lblDescription;
     @FXML private Label     lblStatus;
     @FXML private Label     lblCurrentPrice;
     @FXML private Label     lblHours;
@@ -40,17 +47,30 @@ public class ProductController {
     @FXML private Label     lblBalance;
     @FXML private HBox      paneBalanceInline;
     @FXML private Label     lblBalanceInline;
-    @FXML private Button    btnSellProduct;   // chỉ visible với SELLER
-    @FXML private Button btnMyAuction;
+    @FXML private Button    btnSellProduct;
+    @FXML private Button    btnMyAuction;
 
+    // ── Chart fields ─────────────────────────────────────────────────────────
+    @FXML private LineChart<String, Number> bidChart;
+    @FXML private CategoryAxis             chartXAxis;
+    @FXML private NumberAxis               chartYAxis;
+
+    /** Series duy nhất hiển thị đường giá theo thời gian */
+    private XYChart.Series<String, Number> chartSeries;
+
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final int MAX_CHART_POINTS = 20;
+
+    // ── State ─────────────────────────────────────────────────────────────────
     private Auction  currentAuction;
     private Timeline countdown;
 
-    // Top-5 bids: Map<bidderId, highestBidAmount> — tính từ bidHistory
+    /** Top-5: key = "userId|username", value = giá cao nhất */
     private final LinkedHashMap<String, Double> top5 = new LinkedHashMap<>();
 
     private static final NumberFormat VND = NumberFormat.getInstance(new Locale("vi", "VN"));
 
+    // ── initialize ────────────────────────────────────────────────────────────
     @FXML
     public void initialize() {
         Object data = SceneManager.getAndClearData();
@@ -60,49 +80,138 @@ public class ProductController {
         }
         currentAuction = auction;
 
+        initChart();
         loadAuctionData(auction);
         startCountdown(auction);
 
-        // Build top5 từ lịch sử hiện có
+        seedChartFromHistory(auction.getBids());
+
         rebuildTop5FromHistory(auction.getBids());
         renderBidHistory();
 
         setupBalanceDisplay();
 
-        // Callbacks từ server
         ServerConnection conn = ServerConnection.getInstance();
         conn.setBidUpdateCallback(this::onNewBidReceived);
         conn.setAuctionClosedCallback(this::onAuctionClosed);
         conn.setOutbidCallback(this::onOutbid);
 
-        // Hiện nút Đăng bán SP và Đấu giá tôi nếu là Seller
-        User currentUser = ServerConnection.getInstance().getCurrentUser();
+        User currentUser = conn.getCurrentUser();
         boolean isSeller = currentUser != null && "SELLER".equals(currentUser.getRole());
-        if (btnSellProduct != null) {
-            btnSellProduct.setVisible(isSeller);
-            btnSellProduct.setManaged(isSeller);
-        }
-        if (btnMyAuction != null) {
-            btnMyAuction.setVisible(isSeller);
-            btnMyAuction.setManaged(isSeller);
-        }
+        setVisible(btnSellProduct, isSeller);
+        setVisible(btnMyAuction, isSeller);
     }
 
-    // ── Load thông tin phiên ──────────────────────────────────────────────────
+    // ── Chart ─────────────────────────────────────────────────────────────────
+
+    private void initChart() {
+        if (bidChart == null) return;
+
+        // Style trục
+        chartXAxis.setTickLabelFill(Color.web("rgba(255,255,255,0.55)"));
+        chartYAxis.setTickLabelFill(Color.web("rgba(255,255,255,0.55)"));
+        chartYAxis.setTickLabelFormatter(new NumberAxis.DefaultFormatter(chartYAxis) {
+            @Override
+            public String toString(Number v) {
+                double val = v.doubleValue();
+                if (val >= 1_000_000) return String.format("%.1fM", val / 1_000_000);
+                if (val >= 1_000)     return String.format("%.0fk", val / 1_000);
+                return String.valueOf((long) val);
+            }
+        });
+
+        chartXAxis.setAnimated(false);
+        chartYAxis.setAnimated(false);
+
+        bidChart.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-plot-background-color: rgba(255,255,255,0.04);" +
+                        "-fx-horizontal-grid-lines-visible: true;" +
+                        "-fx-vertical-grid-lines-visible: false;" +
+                        "-fx-horizontal-zero-line-visible: false;"
+        );
+
+        chartSeries = new XYChart.Series<>();
+        chartSeries.setName("Giá đấu");
+        bidChart.getData().add(chartSeries);
+
+        bidChart.applyCss();
+        styleSeries();
+    }
+
+    /** Tô màu đường vàng #e2ff00 và các điểm tròn */
+    private void styleSeries() {
+        Platform.runLater(() -> {
+            if (bidChart == null) return;
+            var line = bidChart.lookup(".chart-series-line");
+            if (line != null) {
+                line.setStyle("-fx-stroke: #000000; -fx-stroke-width: 2px;");
+            }
+            bidChart.lookupAll(".chart-line-symbol").forEach(node ->
+                    node.setStyle(
+                            "-fx-background-color: #000000, #ffffff;" +
+                                    "-fx-background-radius: 5;" +
+                                    "-fx-padding: 4;"
+                    )
+            );
+        });
+    }
+
+    /**
+     * Seed chart từ lịch sử bid có sẵn khi load trang.
+     * Chỉ lấy tối đa MAX_CHART_POINTS điểm gần nhất.
+     */
+    private void seedChartFromHistory(List<BidTransaction> bids) {
+        if (chartSeries == null) return;
+        if (bids == null || bids.isEmpty()) {
+            double basePrice = currentAuction.getItem() != null
+                    ? currentAuction.getItem().getBasePrice() : 0;
+            addChartPoint(basePrice, "Khởi điểm");
+            return;
+        }
+        int start = Math.max(0, bids.size() - MAX_CHART_POINTS);
+        for (int i = start; i < bids.size(); i++) {
+            BidTransaction tx = bids.get(i);
+            String label = tx.getTimestamp() != null
+                    ? tx.getTimestamp().format(TIME_FMT)
+                    : String.valueOf(i + 1);
+            chartSeries.getData().add(new XYChart.Data<>(label, tx.getBidAmount()));
+        }
+        styleSeries();
+    }
+
+    /**
+     * Thêm một điểm mới vào chart.
+     * Gọi trong Platform.runLater hoặc từ seedChartFromHistory.
+     */
+    private void addChartPoint(double price, String timeLabel) {
+        if (chartSeries == null) return;
+        chartSeries.getData().add(new XYChart.Data<>(timeLabel, price));
+        if (chartSeries.getData().size() > MAX_CHART_POINTS) {
+            chartSeries.getData().remove(0);
+        }
+        styleSeries();
+    }
+
+    // ── Load dữ liệu ──────────────────────────────────────────────────────────
     private void loadAuctionData(Auction auction) {
         lblProductName.setText(auction.getItem().getName());
         lblCategory.setText(auction.getItem().getCategory());
         lblStartPrice.setText(fmt(auction.getItem().getBasePrice()) + "đ");
+
+        String desc = auction.getItem().getDescription();
+        if (lblDescription != null) {
+            lblDescription.setText((desc != null && !desc.isBlank()) ? desc : "—");
+        }
+
         refreshCurrentPrice(auction.getCurrentPrice());
         refreshStatus(auction.getStatus());
 
-        // Hiển thị ảnh sản phẩm từ Base64
         String base64 = auction.getItem().getImageBase64();
         if (base64 != null && !base64.isEmpty()) {
             try {
-                byte[] imageBytes = java.util.Base64.getDecoder().decode(base64);
-                java.io.ByteArrayInputStream bis = new java.io.ByteArrayInputStream(imageBytes);
-                imgProduct.setImage(new Image(bis));
+                byte[] bytes = java.util.Base64.getDecoder().decode(base64);
+                imgProduct.setImage(new Image(new java.io.ByteArrayInputStream(bytes)));
             } catch (Exception e) {
                 System.out.println("[ProductController] Không load được ảnh: " + e.getMessage());
             }
@@ -123,33 +232,25 @@ public class ProductController {
     private void setupBalanceDisplay() {
         User user = ServerConnection.getInstance().getCurrentUser();
         if (user instanceof Bidder bidder) {
-            show(paneBalance); show(paneBalanceInline);
+            show(paneBalance);
+            show(paneBalanceInline);
             updateBalanceUI(bidder.getBalance(), bidder.getFrozenBalance());
         } else {
-            hide(paneBalance); hide(paneBalanceInline);
-        }
-        // Ẩn nút đăng bán nếu không phải Seller
-        boolean isSeller = user != null && "SELLER".equals(user.getRole());
-        if (btnSellProduct != null) {
-            btnSellProduct.setVisible(isSeller);
-            btnSellProduct.setManaged(isSeller);
+            hide(paneBalance);
+            hide(paneBalanceInline);
         }
     }
 
     private void updateBalanceUI(double balance, double frozen) {
-        String balText = fmt(balance) + " đ";
-        if (lblBalance       != null) lblBalance.setText(balText);
-        if (lblBalanceInline != null) {
-            double avail = balance - frozen;
+        if (lblBalance != null) lblBalance.setText(fmt(balance) + " đ");
+        if (lblBalanceInline == null) return;
+        double avail = balance - frozen;
+        if (frozen > 0) {
+            lblBalanceInline.setText(fmt(avail) + " đ  (đang giữ " + fmt(frozen) + "đ)");
+            lblBalanceInline.setTextFill(Color.web("#ffd700"));
+        } else {
             lblBalanceInline.setText(fmt(avail) + " đ");
-            // Cảnh báo nếu có frozen
-            if (frozen > 0 && paneBalanceInline != null) {
-                lblBalanceInline.setText(
-                        fmt(avail) + " đ  (đang giữ " + fmt(frozen) + "đ)");
-                lblBalanceInline.setTextFill(Color.web("#ffd700"));
-            } else {
-                lblBalanceInline.setTextFill(Color.web("#00ff88"));
-            }
+            lblBalanceInline.setTextFill(Color.web("#00ff88"));
         }
     }
 
@@ -179,52 +280,31 @@ public class ProductController {
         lblSeconds.setText(String.format("%02d", s % 60));
     }
 
-    // ── Top-5 bid history ─────────────────────────────────────────────────────
-    /**
-     * Xây dựng top5 map từ danh sách bids:
-     * Mỗi bidder chỉ giữ lại giá cao nhất của họ.
-     */
+    // ── Top-5 ─────────────────────────────────────────────────────────────────
     private void rebuildTop5FromHistory(List<BidTransaction> bids) {
         top5.clear();
         if (bids == null) return;
-        Map<String, Double> maxPerBidder = new LinkedHashMap<>();
-        for (BidTransaction tx : bids) {
-            String uid = tx.getBidder().getId();
-            maxPerBidder.merge(uid, tx.getBidAmount(), Math::max);
-            // Lưu tên theo id
-            top5.put(uid + "|" + tx.getBidder().getUsername(), maxPerBidder.get(uid));
-        }
-        // Dùng map uid|name → amount, sắp xếp giảm dần
-        top5.clear();
         Map<String, double[]> temp = new LinkedHashMap<>();
         for (BidTransaction tx : bids) {
             String key = tx.getBidder().getId() + "|" + tx.getBidder().getUsername();
             temp.merge(key, new double[]{tx.getBidAmount()},
                     (a, b) -> new double[]{Math.max(a[0], b[0])});
         }
-        // Sắp xếp theo giá giảm dần, lấy top 5
         temp.entrySet().stream()
                 .sorted((a, b) -> Double.compare(b.getValue()[0], a.getValue()[0]))
                 .limit(5)
                 .forEach(e -> top5.put(e.getKey(), e.getValue()[0]));
     }
 
-    /**
-     * Thêm / cập nhật 1 bid mới vào top5, sắp xếp lại.
-     */
     private void addToTop5(BidTransaction tx) {
         String key = tx.getBidder().getId() + "|" + tx.getBidder().getUsername();
-        double current = top5.getOrDefault(key, 0.0);
-        if (tx.getBidAmount() > current) top5.put(key, tx.getBidAmount());
-
-        // Sắp xếp lại và giới hạn 5
+        top5.merge(key, tx.getBidAmount(), Math::max);
         List<Map.Entry<String, Double>> entries = new ArrayList<>(top5.entrySet());
         entries.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
         top5.clear();
         entries.stream().limit(5).forEach(e -> top5.put(e.getKey(), e.getValue()));
     }
 
-    /** Vẽ lại bảng top-5 lên UI */
     private void renderBidHistory() {
         if (bidHistoryBox == null) return;
         bidHistoryBox.getChildren().clear();
@@ -232,33 +312,17 @@ public class ProductController {
         if (top5.isEmpty()) {
             Label empty = new Label("Chưa có ai đặt giá");
             empty.setTextFill(Color.web("rgba(255,255,255,0.45)"));
-            empty.setFont(Font.font("System", 13));
+            empty.setFont(Font.font("System", 12));
             bidHistoryBox.getChildren().add(empty);
             return;
         }
 
-        // Tiêu đề cột
-        HBox header = new HBox();
-        header.setStyle("-fx-padding: 0 2 6 2;");
-        Label hRank  = new Label("Hạng");
-        hRank.setTextFill(Color.web("rgba(226,255,0,0.60)"));
-        hRank.setFont(Font.font("System", 11));
-        hRank.setPrefWidth(40);
-        Label hName  = new Label("Người đặt");
-        hName.setTextFill(Color.web("rgba(226,255,0,0.60)"));
-        hName.setFont(Font.font("System", 11));
-        HBox.setHgrow(hName, Priority.ALWAYS);
-        Label hAmt   = new Label("Giá cao nhất");
-        hAmt.setTextFill(Color.web("rgba(226,255,0,0.60)"));
-        hAmt.setFont(Font.font("System", 11));
-        header.getChildren().addAll(hRank, hName, hAmt);
-        bidHistoryBox.getChildren().add(header);
-
         String[] rankIcons = {"🥇", "🥈", "🥉", "4.", "5."};
         String[] rankBg    = {
-            "rgba(234,179,8,0.10)", "rgba(192,192,192,0.08)",
-            "rgba(205,127,50,0.08)", "rgba(255,255,255,0.04)", "rgba(255,255,255,0.04)"
+                "rgba(234,179,8,0.10)", "rgba(192,192,192,0.08)",
+                "rgba(205,127,50,0.08)", "rgba(255,255,255,0.04)", "rgba(255,255,255,0.04)"
         };
+
         int rank = 0;
         for (Map.Entry<String, Double> entry : top5.entrySet()) {
             String username = entry.getKey().split("\\|")[1];
@@ -266,49 +330,73 @@ public class ProductController {
 
             HBox row = new HBox();
             row.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: 6; " +
-                "-fx-border-color: rgba(255,255,255,0.08); -fx-border-radius: 6; " +
-                "-fx-border-width: 1; -fx-padding: 7 8; -fx-spacing: 8;",
-                rankBg[rank]));
+                    "-fx-background-color: %s; -fx-background-radius: 5; " +
+                            "-fx-border-color: rgba(255,255,255,0.07); -fx-border-radius: 5; " +
+                            "-fx-border-width: 1; -fx-padding: 5 7; -fx-spacing: 6;",
+                    rankBg[rank]));
 
-            // Rank icon
             Label lblRank = new Label(rankIcons[rank]);
-            lblRank.setFont(Font.font("System", 14));
-            lblRank.setPrefWidth(28);
+            lblRank.setFont(Font.font("System", 12));
+            lblRank.setPrefWidth(24);
 
-            // Username
             Color nameColor = rank == 0 ? Color.web("#eab308")
                     : rank == 1 ? Color.web("#c0c0c0")
                     : rank == 2 ? Color.web("#cd7f32") : Color.WHITE;
             Label lblName = new Label(username);
             lblName.setTextFill(nameColor);
-            lblName.setFont(Font.font("System", FontWeight.BOLD, 13));
+            lblName.setFont(Font.font("System", FontWeight.BOLD, 11));
             HBox.setHgrow(lblName, Priority.ALWAYS);
 
-            // Amount
-            Label lblAmt = new Label(fmt(amount) + " đ");
+            Label lblAmt = new Label(fmt(amount) + "đ");
             lblAmt.setTextFill(rank == 0 ? Color.web("#e2ff00") : Color.web("#00ff88"));
-            lblAmt.setFont(Font.font("System", FontWeight.BOLD, 13));
+            lblAmt.setFont(Font.font("System", FontWeight.BOLD, 11));
 
             row.getChildren().addAll(lblRank, lblName, lblAmt);
             bidHistoryBox.getChildren().add(row);
             rank++;
         }
 
-        // Hiển thị tổng số lượt đặt giá
         int totalBids = currentAuction != null && currentAuction.getBids() != null
                 ? currentAuction.getBids().size() : top5.size();
         Label lblTotal = new Label("Tổng cộng " + totalBids + " lượt đặt giá");
-        lblTotal.setTextFill(Color.web("rgba(255,255,255,0.40)"));
-        lblTotal.setFont(Font.font("System", 11));
-        lblTotal.setStyle("-fx-padding: 6 2 0 2;");
+        lblTotal.setTextFill(Color.web("rgba(255,255,255,0.38)"));
+        lblTotal.setFont(Font.font("System", 10));
+        lblTotal.setStyle("-fx-padding: 4 2 0 2;");
         bidHistoryBox.getChildren().add(lblTotal);
     }
 
-    // ── Callback: bị người khác vượt giá ─────────────────────────────────────
+    // ── Callbacks realtime ────────────────────────────────────────────────────
+    private void onNewBidReceived(BidTransaction tx) {
+        if (currentAuction == null || !tx.getAuctionId().equals(currentAuction.getId())) return;
+
+        currentAuction.setCurrentPriceOnly(tx.getBidAmount());
+        currentAuction.injectBid(tx);
+
+        Platform.runLater(() -> {
+            refreshCurrentPrice(tx.getBidAmount());
+            refreshStatus(AuctionStatus.RUNNING);
+
+            // ── Thêm điểm vào chart ──
+            String timeLabel = tx.getTimestamp() != null
+                    ? tx.getTimestamp().format(TIME_FMT)
+                    : LocalDateTime.now().format(TIME_FMT);
+            addChartPoint(tx.getBidAmount(), timeLabel);
+
+            addToTop5(tx);
+            renderBidHistory();
+
+            if (lblBidError != null) lblBidError.setVisible(false);
+
+            User user = ServerConnection.getInstance().getCurrentUser();
+            if (user instanceof Bidder bidder && bidder.getId().equals(tx.getBidder().getId())) {
+                updateBalanceUI(bidder.getBalance(), bidder.getFrozenBalance());
+                txtBidAmount.clear();
+            }
+        });
+    }
+
     private void onOutbid(String auctionId) {
         if (currentAuction == null || !currentAuction.getId().equals(auctionId)) return;
-        // Số dư đã được cập nhật trong ServerConnection, chỉ cần refresh UI
         User user = ServerConnection.getInstance().getCurrentUser();
         if (user instanceof Bidder bidder) {
             Platform.runLater(() -> {
@@ -318,37 +406,6 @@ public class ProductController {
         }
     }
 
-    // ── Callback: nhận bid mới realtime ───────────────────────────────────────
-    private void onNewBidReceived(BidTransaction tx) {
-        if (currentAuction == null || !tx.getAuctionId().equals(currentAuction.getId())) return;
-
-        // Cập nhật currentPrice trong auction in-memory (KHÔNG gọi placeBid — tránh duplicate)
-        currentAuction.setCurrentPriceOnly(tx.getBidAmount());
-        // Thêm vào lịch sử để đếm tổng lượt bid chính xác
-        currentAuction.injectBid(tx);
-
-        Platform.runLater(() -> {
-            // Cập nhật giá
-            refreshCurrentPrice(tx.getBidAmount());
-            refreshStatus(AuctionStatus.RUNNING);
-
-            // Cập nhật top5
-            addToTop5(tx);
-            renderBidHistory();
-
-            // Ẩn thông báo lỗi
-            if (lblBidError != null) lblBidError.setVisible(false);
-
-            // Cập nhật số dư nếu là bid của mình
-            User user = ServerConnection.getInstance().getCurrentUser();
-            if (user instanceof Bidder bidder && bidder.getId().equals(tx.getBidder().getId())) {
-                updateBalanceUI(bidder.getBalance(), bidder.getFrozenBalance());
-                txtBidAmount.clear();
-            }
-        });
-    }
-
-    // ── Callback: phiên kết thúc ──────────────────────────────────────────────
     private void onAuctionClosed(Auction closed) {
         if (currentAuction == null || !closed.getId().equals(currentAuction.getId())) return;
         Platform.runLater(() -> {
@@ -356,14 +413,10 @@ public class ProductController {
             refreshStatus(AuctionStatus.FINISHED);
             lblHours.setText("00"); lblMinutes.setText("00"); lblSeconds.setText("00");
 
-            // Nếu user là winner → thông báo thắng + cập nhật số dư
             User user = ServerConnection.getInstance().getCurrentUser();
             if (user instanceof Bidder bidder) {
-                // Reload balance từ server (server đã update balance)
                 updateBalanceUI(bidder.getBalance(), bidder.getFrozenBalance());
-
-                if (closed.getWinner() != null
-                        && closed.getWinner().getId().equals(bidder.getId())) {
+                if (closed.getWinner() != null && closed.getWinner().getId().equals(bidder.getId())) {
                     showBidMsg("🏆 Chúc mừng! Bạn đã thắng phiên đấu giá!", true);
                 } else if (top5.keySet().stream().anyMatch(k -> k.startsWith(bidder.getId()))) {
                     showBidMsg("Phiên kết thúc. Tiền đặt cọc đã được hoàn trả.", true);
@@ -404,9 +457,8 @@ public class ProductController {
             return;
         }
 
-        // Kiểm tra số dư khả dụng phía client (server sẽ kiểm tra lại)
-        double oldFrozen  = bidder.getFrozenForAuction(currentAuction.getId());
-        double available  = bidder.getAvailableBalance() + oldFrozen;
+        double oldFrozen = bidder.getFrozenForAuction(currentAuction.getId());
+        double available = bidder.getAvailableBalance() + oldFrozen;
         if (available < amount) {
             showBidMsg(String.format("Số dư khả dụng không đủ! (Khả dụng: %sđ)", fmt(available)), false);
             return;
@@ -424,19 +476,19 @@ public class ProductController {
     }
 
     // ── Điều hướng ────────────────────────────────────────────────────────────
-    @FXML private void handleGoHome()  { cleanup(); SceneManager.switchScene("UI.fxml"); }
-    @FXML private void handleGoBack()  { cleanup(); SceneManager.switchScene("UI.fxml"); }
+    @FXML private void handleGoHome()          { cleanup(); SceneManager.switchScene("UI.fxml"); }
+    @FXML private void handleGoBack()          { cleanup(); SceneManager.switchScene("UI.fxml"); }
     @FXML private void handleGoCreateAuction() { cleanup(); SceneManager.switchScene("CreateAuction.fxml"); }
     @FXML private void handleGoProfile()       { cleanup(); SceneManager.switchScene("Profile.fxml"); }
+    @FXML private void handleGoMyAuction()     { SceneManager.switchScene("MyAuctions.fxml"); }
+
     @FXML private void handleLogout() {
         cleanup();
         try { ServerConnection.getInstance().sendMessage(new Message("LOGOUT", null)); }
         catch (Exception ignored) {}
         SceneManager.switchScene("login.fxml");
     }
-    @FXML private void handleGoMyAuction() {
-        SceneManager.switchScene("MyAuctions.fxml");
-    }
+
     private void cleanup() {
         if (countdown != null) countdown.stop();
         ServerConnection conn = ServerConnection.getInstance();
@@ -453,7 +505,11 @@ public class ProductController {
             lblBidError.setVisible(true);
         }
     }
+
     private static void show(Region node) { if (node != null) { node.setVisible(true);  node.setManaged(true);  } }
     private static void hide(Region node) { if (node != null) { node.setVisible(false); node.setManaged(false); } }
+    private static void setVisible(Button btn, boolean v) {
+        if (btn != null) { btn.setVisible(v); btn.setManaged(v); }
+    }
     private String fmt(double v) { return VND.format((long) v); }
 }

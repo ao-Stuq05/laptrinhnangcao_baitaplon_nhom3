@@ -74,7 +74,7 @@ public class AuctionServer {
     }
 
 
-     /* 1. Lưu trạng thái + winner vào DB
+    /* 1. Lưu trạng thái + winner vào DB
      * 2. Xử lý tài chính: charge winner, unfreeze losers
      * 3. Broadcast AUCTION_CLOSED tới tất cả clients
      */
@@ -477,6 +477,24 @@ public class AuctionServer {
                                 List<Auction> list;
                                 if (currentUser instanceof Seller seller) {
                                     list = auctionDAO.findBySeller(seller.getId());
+                                    // Inject bids vào mỗi auction (giống GET_AUCTIONS)
+                                    for (Auction auction : list) {
+                                        Auction inMem = AuctionManager.getInstance()
+                                                .getAuction(auction.getId());
+                                        if (inMem != null && inMem.getBids() != null
+                                                && !inMem.getBids().isEmpty()) {
+                                            for (BidTransaction tx : inMem.getBids()) {
+                                                auction.injectBid(tx);
+                                            }
+                                            auction.setCurrentPriceOnly(inMem.getCurrentPrice());
+                                        } else {
+                                            List<BidTransaction> bids =
+                                                    bidTransactionDAO.findByAuction(auction.getId());
+                                            for (BidTransaction tx : bids) {
+                                                auction.injectBid(tx);
+                                            }
+                                        }
+                                    }
                                 } else {
                                     list = new ArrayList<>();
                                 }
@@ -531,6 +549,146 @@ public class AuctionServer {
                                 System.out.println("[Server] UPDATE_PROFILE OK: " + currentUser.getUsername());
                             } catch (Exception e) {
                                 out.writeObject(new Message("UPDATE_PROFILE_FAILED", "Lỗi: " + e.getMessage()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── HỦY PHIÊN ĐẤU GIÁ ───────────────────────────────
+                        case "CANCEL_AUCTION" -> {
+                            try {
+                                String auctionId = (String) request.getPayload();
+                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
+                                if (auction == null) {
+                                    auction = auctionDAO.findById(auctionId).orElse(null);
+                                }
+                                if (auction == null) {
+                                    out.writeObject(new Message("CANCEL_AUCTION_FAILED",
+                                            "Không tìm thấy phiên: " + auctionId));
+                                    out.flush();
+                                    break;
+                                }
+                                // Chỉ cho hủy nếu chưa có ai đặt giá
+                                if (auction.getLeadingBidder() != null) {
+                                    out.writeObject(new Message("CANCEL_AUCTION_FAILED",
+                                            "Không thể hủy phiên đã có người đặt giá!"));
+                                    out.flush();
+                                    break;
+                                }
+                                // Chỉ seller sở hữu phiên mới được hủy
+                                if (currentUser == null ||
+                                        !auction.getSeller().getId().equals(currentUser.getId())) {
+                                    out.writeObject(new Message("CANCEL_AUCTION_FAILED",
+                                            "Bạn không có quyền hủy phiên này!"));
+                                    out.flush();
+                                    break;
+                                }
+                                auction.setStatus(AuctionStatus.CANCELLED);
+                                auctionDAO.update(auction);
+                                // Hủy lịch đóng tự động trong AuctionManager
+                                AuctionManager.getInstance().closeAuction(auctionId);
+
+                                out.writeObject(new Message("CANCEL_AUCTION_SUCCESS", auctionId));
+                                System.out.println("[Server] CANCEL_AUCTION OK: " + auctionId);
+                                // Broadcast để các client khác cập nhật UI
+                                broadcast(new Message("AUCTION_CLOSED", auction), this);
+                            } catch (Exception e) {
+                                out.writeObject(new Message("CANCEL_AUCTION_FAILED",
+                                        "Lỗi server: " + e.getMessage()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── CẬP NHẬT PHIÊN ĐẤU GIÁ ──────────────────────────
+                        case "UPDATE_AUCTION" -> {
+                            try {
+                                @SuppressWarnings("unchecked")
+                                HashMap<String, Object> payload =
+                                        (HashMap<String, Object>) request.getPayload();
+                                String auctionId = (String) payload.get("auctionId");
+
+                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
+                                if (auction == null) {
+                                    auction = auctionDAO.findById(auctionId).orElse(null);
+                                }
+                                if (auction == null) {
+                                    out.writeObject(new Message("UPDATE_AUCTION_FAILED",
+                                            "Không tìm thấy phiên: " + auctionId));
+                                    out.flush();
+                                    break;
+                                }
+                                // Chỉ seller sở hữu phiên mới được sửa
+                                if (currentUser == null ||
+                                        !auction.getSeller().getId().equals(currentUser.getId())) {
+                                    out.writeObject(new Message("UPDATE_AUCTION_FAILED",
+                                            "Bạn không có quyền sửa phiên này!"));
+                                    out.flush();
+                                    break;
+                                }
+                                // Chỉ cho sửa nếu chưa có ai đặt giá
+                                if (auction.getLeadingBidder() != null) {
+                                    out.writeObject(new Message("UPDATE_AUCTION_FAILED",
+                                            "Không thể sửa phiên đã có người đặt giá!"));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Cập nhật thông tin item
+                                String name     = (String) payload.get("name");
+                                String desc     = (String) payload.get("description");
+                                double price    = (double) payload.get("startPrice");
+                                String category = (String) payload.get("category");
+                                java.time.LocalDateTime newEnd = java.time.LocalDateTime.parse(
+                                        (String) payload.get("endDateTime"));
+
+                                // Nếu category thay đổi → tạo lại Item đúng subclass
+                                Item oldItem = auction.getItem();
+                                String newCategoryKey = switch (category != null ? category : "") {
+                                    case "Xe cộ"              -> "VEHICLE";
+                                    case "Nghệ thuật"         -> "ART";
+                                    case "Điện tử"            -> "ELECTRONICS";
+                                    default                   -> "ELECTRONICS";
+                                };
+                                Item updatedItem;
+                                if (!newCategoryKey.equalsIgnoreCase(oldItem.getCategory())) {
+                                    // Tạo lại Item mới cùng id, đúng subclass
+                                    Seller itemSeller = oldItem.getSeller();
+                                    updatedItem = switch (newCategoryKey) {
+                                        case "VEHICLE"     -> new Vehicle(oldItem.getId(), name, desc, price, itemSeller, "Unknown", 0);
+                                        case "ART"         -> new Art(oldItem.getId(), name, desc, price, itemSeller, "Unknown", 2024);
+                                        default            -> new Electronics(oldItem.getId(), name, desc, price, itemSeller, 12);
+                                    };
+                                    updatedItem.setImageBase64(oldItem.getImageBase64());
+                                    auction.setItem(updatedItem);
+                                } else {
+                                    oldItem.setName(name);
+                                    oldItem.setDescription(desc);
+                                    oldItem.setBasePrice(price);
+                                    updatedItem = oldItem;
+                                }
+
+                                auction.setCurrentPriceOnly(price);
+                                auction.setEndTime(newEnd);
+
+                                // Cập nhật ảnh nếu có ảnh mới
+                                String imageBase64 = (String) payload.get("imageBase64");
+                                if (imageBase64 != null && !imageBase64.isEmpty()) {
+                                    updatedItem.setImageBase64(imageBase64);
+                                }
+
+                                // Lưu DB
+                                itemDAO.update(updatedItem);
+                                auctionDAO.update(auction);
+
+                                // Cập nhật lịch đóng tự động (endTime mới)
+                                AuctionManager.getInstance().extendAuction(auctionId, 0);
+
+                                out.writeObject(new Message("UPDATE_AUCTION_SUCCESS", auction));
+                                System.out.println("[Server] UPDATE_AUCTION OK: " + auctionId);
+                            } catch (Exception e) {
+                                out.writeObject(new Message("UPDATE_AUCTION_FAILED",
+                                        "Lỗi server: " + e.getMessage()));
                                 e.printStackTrace();
                             }
                             out.flush();
