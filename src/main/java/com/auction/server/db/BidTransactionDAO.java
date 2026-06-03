@@ -18,8 +18,6 @@ public class BidTransactionDAO {
         this.conn    = DatabaseManager.getInstance().getConnection();
         this.userDAO = new UserDAO();
     }
-
-    /** Lưu 1 BidTransaction mới vào DB */
     public void save(BidTransaction bid) throws SQLException {
         String sql = """
             INSERT INTO bid_transactions (id, auction_id, bidder_id, bid_amount, is_winning, timestamp)
@@ -89,13 +87,6 @@ public class BidTransactionDAO {
         }
         return results;
     }
-
-    /**
-     * Lấy lịch sử bid của Bidder kèm tên sản phẩm (JOIN với auctions + items).
-     * Dùng cho màn hình Profile → tab "Lịch sử mua".
-     * auctionId trong BidTransaction sẽ được thay bằng tên sản phẩm thực tế
-     * thông qua một BidTransaction đặc biệt chứa itemName trong auctionId field.
-     */
     public List<BidTransaction> findByBidderWithItem(String bidderId, AuctionDAO auctionDAO) throws SQLException {
         String sql = """
             SELECT bt.id, bt.auction_id, bt.bid_amount, bt.is_winning, bt.timestamp,

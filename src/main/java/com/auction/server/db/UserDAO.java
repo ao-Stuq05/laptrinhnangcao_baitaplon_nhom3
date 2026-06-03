@@ -129,8 +129,6 @@ public class UserDAO {
             ps.executeUpdate();
         }
     }
-
-    /** Cập nhật cả balance và frozen_balance cùng lúc (dùng khi kết thúc phiên) */
     public void updateBalanceAndFrozen(String bidderId, double newBalance, double newFrozen) throws SQLException {
         String sql = "UPDATE users SET balance = ?, frozen_balance = ?, updated_at = ? WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -141,8 +139,6 @@ public class UserDAO {
             ps.executeUpdate();
         }
     }
-
-    /** MỚI: Cập nhật email và password của user từ màn hình Hồ sơ */
     public void updateProfile(String userId, String newEmail, String newPassword) throws SQLException {
         if (newPassword != null && !newPassword.isEmpty()) {
             String sql = "UPDATE users SET email = ?, password_hash = ?, updated_at = ? WHERE id = ?";
