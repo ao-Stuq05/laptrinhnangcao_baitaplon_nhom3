@@ -27,6 +27,13 @@ public class ServerConnection {
     private Consumer<Auction>              auctionClosedCallback;
     /** Callback khi bị người khác vượt giá — nhận auctionId để ProductController refresh balance */
     private Consumer<String>               outbidCallback;
+    
+    // ── Admin Callbacks ────────────────────────────────────────────────────────
+    private Consumer<List<User>>           adminUserCallback;
+    private Consumer<List<Auction>>        adminAuctionCallback;
+    private Consumer<String>               adminApproveCallback;
+    private Consumer<String>               adminRejectCallback;
+    private Consumer<String>               adminBanCallback;
 
     private ServerConnection() {}
     public static ServerConnection getInstance() {
@@ -44,6 +51,11 @@ public class ServerConnection {
     public void setProfileUpdateCallback (Consumer<User> cb)                  { profileUpdateCallback  = cb; }
     public void setAuctionClosedCallback (Consumer<Auction> cb)               { auctionClosedCallback  = cb; }
     public void setOutbidCallback        (Consumer<String> cb)                { outbidCallback         = cb; }
+    public void setAdminUserCallback     (Consumer<List<User>> cb)            { adminUserCallback      = cb; }
+    public void setAdminAuctionCallback  (Consumer<List<Auction>> cb)         { adminAuctionCallback   = cb; }
+    public void setAdminApproveCallback  (Consumer<String> cb)                { adminApproveCallback   = cb; }
+    public void setAdminRejectCallback   (Consumer<String> cb)                { adminRejectCallback    = cb; }
+    public void setAdminBanCallback      (Consumer<String> cb)                { adminBanCallback       = cb; }
 
     public void connect(String host, int port) throws IOException {
         if (socket == null || socket.isClosed()) {
@@ -77,7 +89,9 @@ public class ServerConnection {
 
             case "LOGIN_SUCCESS" -> {
                 currentUser = (User) msg.getPayload();
-                Platform.runLater(() -> SceneManager.switchScene("UI.fxml"));
+                // Điều hướng dựa trên vai trò của user
+                String scene = (currentUser instanceof com.auction.shared.model.Admin) ? "Admin.fxml" : "UI.fxml";
+                Platform.runLater(() -> SceneManager.switchScene(scene));
             }
             case "LOGIN_FAILED" ->
                     Platform.runLater(() -> alert("Đăng nhập thất bại",
@@ -257,6 +271,28 @@ public class ServerConnection {
                         } catch (Exception ignored) {}
                     }
                 });
+            }
+
+            // ── Admin messages ──────────────────────────────────────────────────
+            case "GET_ALL_USERS_SUCCESS" -> {
+                @SuppressWarnings("unchecked") List<User> list = (List<User>) msg.getPayload();
+                if (adminUserCallback != null) Platform.runLater(() -> adminUserCallback.accept(list));
+            }
+            case "GET_ALL_AUCTIONS_SUCCESS" -> {
+                @SuppressWarnings("unchecked") List<Auction> list = (List<Auction>) msg.getPayload();
+                if (adminAuctionCallback != null) Platform.runLater(() -> adminAuctionCallback.accept(list));
+            }
+            case "APPROVE_AUCTION_SUCCESS" -> {
+                String auctionId = (String) msg.getPayload();
+                if (adminApproveCallback != null) Platform.runLater(() -> adminApproveCallback.accept(auctionId));
+            }
+            case "REJECT_AUCTION_SUCCESS" -> {
+                String auctionId = (String) msg.getPayload();
+                if (adminRejectCallback != null) Platform.runLater(() -> adminRejectCallback.accept(auctionId));
+            }
+            case "BAN_USER_SUCCESS" -> {
+                String userId = (String) msg.getPayload();
+                if (adminBanCallback != null) Platform.runLater(() -> adminBanCallback.accept(userId));
             }
 
             default -> System.out.println("[Client] Không xử lý: " + msg.getType());

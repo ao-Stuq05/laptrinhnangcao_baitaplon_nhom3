@@ -701,6 +701,179 @@ public class AuctionServer {
                             currentUser = null;
                         }
 
+                        // ── ADMIN: LẤY DANH SÁCH NGƯỜI DÙNG ─────────────────
+                        case "GET_ALL_USERS" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("GET_ALL_USERS_SUCCESS", new ArrayList<>()));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                List<User> allUsers = userDAO.findAll();
+                                out.writeObject(new Message("GET_ALL_USERS_SUCCESS",
+                                        (java.io.Serializable) allUsers));
+                                System.out.println("[Server] GET_ALL_USERS OK: " + allUsers.size() + " users");
+                            } catch (Exception e) {
+                                out.writeObject(new Message("GET_ALL_USERS_SUCCESS", new ArrayList<>()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── ADMIN: LẤY DANH SÁCH PHIÊN ──────────────────────
+                        case "GET_ALL_AUCTIONS" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("GET_ALL_AUCTIONS_SUCCESS", new ArrayList<>()));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                List<Auction> allAuctions = auctionDAO.findAll();
+                                // Inject bids từ DB và in-memory
+                                for (Auction auction : allAuctions) {
+                                    Auction inMem = AuctionManager.getInstance()
+                                            .getAuction(auction.getId());
+                                    if (inMem != null && inMem.getBids() != null
+                                            && !inMem.getBids().isEmpty()) {
+                                        for (BidTransaction tx : inMem.getBids()) {
+                                            auction.injectBid(tx);
+                                        }
+                                        auction.setCurrentPriceOnly(inMem.getCurrentPrice());
+                                    } else {
+                                        List<BidTransaction> bids =
+                                                bidTransactionDAO.findByAuction(auction.getId());
+                                        for (BidTransaction tx : bids) {
+                                            auction.injectBid(tx);
+                                        }
+                                    }
+                                }
+                                out.writeObject(new Message("GET_ALL_AUCTIONS_SUCCESS",
+                                        (java.io.Serializable) allAuctions));
+                                System.out.println("[Server] GET_ALL_AUCTIONS OK: " + allAuctions.size() + " phiên");
+                            } catch (Exception e) {
+                                out.writeObject(new Message("GET_ALL_AUCTIONS_SUCCESS", new ArrayList<>()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── ADMIN: DỰA PHIÊN ─────────────────────────────────
+                        case "APPROVE_AUCTION" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("APPROVE_AUCTION_SUCCESS", null));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                String auctionId = (String) request.getPayload();
+                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
+                                if (auction == null) {
+                                    auction = auctionDAO.findById(auctionId).orElse(null);
+                                }
+                                if (auction == null) {
+                                    out.writeObject(new Message("APPROVE_AUCTION_SUCCESS", null));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Chỉ duyệt nếu đang chờ duyệt
+                                if (auction.getStatus() != AuctionStatus.PENDING_APPROVAL) {
+                                    out.writeObject(new Message("APPROVE_AUCTION_SUCCESS", null));
+                                    out.flush();
+                                    break;
+                                }
+
+                                auction.setStatus(AuctionStatus.OPEN);
+                                auctionDAO.update(auction);
+                                AuctionManager.getInstance().registerAuction(auction);
+
+                                out.writeObject(new Message("APPROVE_AUCTION_SUCCESS", auctionId));
+                                System.out.println("[Server] APPROVE_AUCTION OK: " + auctionId);
+
+                                // Broadcast để seller và clients khác cập nhật UI
+                                broadcast(new Message("APPROVE_AUCTION_SUCCESS", auctionId), this);
+                            } catch (Exception e) {
+                                out.writeObject(new Message("APPROVE_AUCTION_SUCCESS", null));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── ADMIN: TỪ CHốI PHIÊN ─────────────────────────────
+                        case "REJECT_AUCTION" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("REJECT_AUCTION_SUCCESS", null));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                String auctionId = (String) request.getPayload();
+                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
+                                if (auction == null) {
+                                    auction = auctionDAO.findById(auctionId).orElse(null);
+                                }
+                                if (auction == null) {
+                                    out.writeObject(new Message("REJECT_AUCTION_SUCCESS", null));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Chỉ từ chối nếu đang chờ duyệt
+                                if (auction.getStatus() != AuctionStatus.PENDING_APPROVAL) {
+                                    out.writeObject(new Message("REJECT_AUCTION_SUCCESS", null));
+                                    out.flush();
+                                    break;
+                                }
+
+                                auction.setStatus(AuctionStatus.CANCELLED);
+                                auctionDAO.update(auction);
+
+                                out.writeObject(new Message("REJECT_AUCTION_SUCCESS", auctionId));
+                                System.out.println("[Server] REJECT_AUCTION OK: " + auctionId);
+
+                                // Broadcast để seller cập nhật UI
+                                broadcast(new Message("REJECT_AUCTION_SUCCESS", auctionId), this);
+                            } catch (Exception e) {
+                                out.writeObject(new Message("REJECT_AUCTION_SUCCESS", null));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── ADMIN: KHOÁ/MỞ KHOÁ NGƯỜI DÙNG ──────────────────
+                        case "BAN_USER" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("BAN_USER_SUCCESS", null));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                String userId = (String) request.getPayload();
+                                User user = userDAO.findById(userId).orElse(null);
+                                if (user == null) {
+                                    out.writeObject(new Message("BAN_USER_SUCCESS", null));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Toggle active status
+                                boolean newStatus = !user.isActive();
+                                userDAO.updateActive(userId, newStatus);
+                                user.setActive(newStatus);
+
+                                out.writeObject(new Message("BAN_USER_SUCCESS", userId));
+                                System.out.println("[Server] BAN_USER OK: " + user.getUsername() +
+                                        " | Active: " + newStatus);
+
+                                // Broadcast để admin khác cập nhật UI
+                                broadcast(new Message("BAN_USER_SUCCESS", userId), this);
+                            } catch (Exception e) {
+                                out.writeObject(new Message("BAN_USER_SUCCESS", null));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
                         default -> System.out.println("[Server] Không xử lý: " + request.getType());
                     }
                 }

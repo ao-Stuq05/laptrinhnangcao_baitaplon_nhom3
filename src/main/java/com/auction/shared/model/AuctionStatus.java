@@ -1,5 +1,5 @@
 package com.auction.shared.model;
 
 public enum AuctionStatus {
-    OPEN, RUNNING, FINISHED, PAID, CANCELLED
+    PENDING_APPROVAL, OPEN, RUNNING, FINISHED, PAID, CANCELLED
 }

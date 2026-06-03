@@ -3,7 +3,6 @@ package com.auction.client;
 import com.auction.client.network.ServerConnection;
 import javafx.application.Application;
 import javafx.scene.control.Alert;
-import javafx.scene.control.TextInputDialog;
 import javafx.stage.Stage;
 import java.io.IOException;
 
@@ -11,17 +10,10 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) {
-        // 1. Hỏi IP máy chủ (hỗ trợ chạy qua mạng LAN)
-        TextInputDialog dialog = new TextInputDialog("localhost");
-        dialog.setTitle("Kết nối Server");
-        dialog.setHeaderText("Nhập địa chỉ IP của máy đang chạy Server.\n(Nếu chạy cùng máy, giữ nguyên 'localhost')");
-        dialog.setContentText("IP Server:");
+        // Kết nối tới Server trên localhost
+        String host = "localhost";
 
-        // Bắt buộc người dùng nhập, không cho bỏ qua
-        String host = dialog.showAndWait().orElse("localhost").trim();
-        if (host.isEmpty()) host = "localhost";
-
-        // 2. Cố gắng kết nối đến Server
+        // Cố gắng kết nối đến Server
         try {
             ServerConnection.getInstance().connect(host, 1234);
         } catch (IOException e) {
