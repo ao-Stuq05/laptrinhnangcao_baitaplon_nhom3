@@ -103,8 +103,9 @@ public class CreateAuctionController {
             String displayCat = switch (rawCat.toUpperCase()) {
                 case "VEHICLE"     -> "Xe cộ";
                 case "ELECTRONICS" -> "Điện tử";
-                case "ART"         -> "Nghệ thuật";
+                case "ART"         -> "Nghệ thuật & Cổ vật";
                 case "JEWELRY"     -> "Đồng hồ & Trang sức";
+                case "OTHER"       -> "Khác";
                 default            -> "Khác";
             };
             cbCategory.setValue(displayCat);
