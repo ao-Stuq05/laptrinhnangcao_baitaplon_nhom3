@@ -27,7 +27,9 @@ public class ServerConnection {
     private Consumer<Auction>              auctionClosedCallback;
     /** Callback khi bị người khác vượt giá — nhận auctionId để ProductController refresh balance */
     private Consumer<String>               outbidCallback;
-
+    /** Callback khi phiên bị gia hạn do anti-sniping — nhận (auctionId, newEndTime) */
+    private java.util.function.BiConsumer<String, String> auctionExtendedCallback;
+    
     // ── Admin Callbacks ────────────────────────────────────────────────────────
     private Consumer<List<User>>           adminUserCallback;
     private Consumer<List<Auction>>        adminAuctionCallback;
@@ -49,8 +51,9 @@ public class ServerConnection {
     public void setMyAuctionCallback     (Consumer<List<Auction>> cb)         { myAuctionCallback      = cb; }
     public void setMyBidCallback         (Consumer<List<BidTransaction>> cb)  { myBidCallback          = cb; }
     public void setProfileUpdateCallback (Consumer<User> cb)                  { profileUpdateCallback  = cb; }
-    public void setAuctionClosedCallback (Consumer<Auction> cb)               { auctionClosedCallback  = cb; }
-    public void setOutbidCallback        (Consumer<String> cb)                { outbidCallback         = cb; }
+    public void setAuctionClosedCallback (Consumer<Auction> cb)               { auctionClosedCallback   = cb; }
+    public void setOutbidCallback        (Consumer<String> cb)                { outbidCallback          = cb; }
+    public void setAuctionExtendedCallback(java.util.function.BiConsumer<String, String> cb) { auctionExtendedCallback = cb; }
     public void setAdminUserCallback     (Consumer<List<User>> cb)            { adminUserCallback      = cb; }
     public void setAdminAuctionCallback  (Consumer<List<Auction>> cb)         { adminAuctionCallback   = cb; }
     public void setAdminApproveCallback  (Consumer<String> cb)                { adminApproveCallback   = cb; }
@@ -182,7 +185,6 @@ public class ServerConnection {
                     bidder.unfreezeForAuction(auctionId);
                     if (bidUpdateCallback != null) {
                         // Tái dùng callback để ProductController cập nhật UI số dư
-                        // (tx=null được xử lý an toàn — chỉ cần trigger refresh balance)
                     }
                     Platform.runLater(() -> {
                         if (outbidCallback != null) outbidCallback.accept(auctionId);
@@ -220,7 +222,19 @@ public class ServerConnection {
                     Platform.runLater(() -> alert("Cập nhật thất bại",
                             (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
 
-            // ── Phiên kết thúc (từ AuctionManager broadcast) ─────────────────
+            // ── Phiên kết thúc hoặc biến động thời gian do Anti-sniping ─────
+            case "AUCTION_EXTENDED" -> {
+                @SuppressWarnings("unchecked")
+                java.util.HashMap<String, Object> ep =
+                        (java.util.HashMap<String, Object>) msg.getPayload();
+                String extAuctionId = (String) ep.get("auctionId");
+                String newEndTimeStr = (String) ep.get("newEndTime");
+                // Thông báo cho ProductController cập nhật lại bộ đếm giờ countdown
+                if (auctionExtendedCallback != null) {
+                    Platform.runLater(() -> auctionExtendedCallback.accept(extAuctionId, newEndTimeStr));
+                }
+            }
+
             case "AUCTION_CLOSED" -> {
                 Auction closed = (Auction) msg.getPayload();
 
@@ -249,12 +263,11 @@ public class ServerConnection {
                             "Bạn đã thắng phiên đấu giá: " + a.getItem().getName() +
                                     " với mức giá " + String.format("%.0f đ", a.getCurrentPrice()),
                             javafx.scene.control.Alert.AlertType.INFORMATION);
-                    // Callback để cập nhật UI nếu cần
                     if (auctionClosedCallback != null) auctionClosedCallback.accept(a);
                 });
             }
 
-            // ── Thông báo dành riêng: seller được thông báo sản phẩm đã bán
+            // ── Thông báo dành riêng: seller được thông báo sản phẩm đã bán ──
             case "AUCTION_SOLD" -> {
                 Auction a = (Auction) msg.getPayload();
                 Platform.runLater(() -> {
@@ -265,8 +278,6 @@ public class ServerConnection {
                     // Nếu seller đang xem trang quản lý, refresh danh sách
                     if (myAuctionCallback != null) {
                         try {
-                            // Yêu cầu server lấy lại danh sách my auctions
-                            // Client có thể gọi API GET_MY_AUCTIONS khi cần; gửi request
                             sendMessage(new Message("GET_MY_AUCTIONS", null));
                         } catch (Exception ignored) {}
                     }
@@ -282,8 +293,8 @@ public class ServerConnection {
                 @SuppressWarnings("unchecked") List<Auction> list = (List<Auction>) msg.getPayload();
                 if (adminAuctionCallback != null) Platform.runLater(() -> adminAuctionCallback.accept(list));
             }
-            // [FIX 1] Thêm null-guard cho payload: server trả null khi thao tác thất bại.
-            // Nếu không kiểm tra, callback trong AdminController gọi equals() trên null → NPE.
+            
+            // Tích hợp Null-Guard từ phiên bản 2 phòng trừ lỗi NPE khi server trả về payload rỗng
             case "APPROVE_AUCTION_SUCCESS" -> {
                 String auctionId = (String) msg.getPayload();
                 if (auctionId != null && adminApproveCallback != null)

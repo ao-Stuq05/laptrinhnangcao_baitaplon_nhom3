@@ -22,7 +22,6 @@ public class CreateAdminAccount {
         UserDAO userDAO = new UserDAO();
 
         try {
-            // 1. Kiểm tra xem admin đã tồn tại chưa
             System.out.println("[1] Kiểm tra xem admin đã tồn tại...");
             if (userDAO.existsByUsername(username)) {
                 System.out.println("⚠ Admin '" + username + "' đã tồn tại trong hệ thống!");
@@ -31,25 +30,17 @@ public class CreateAdminAccount {
                 System.out.println("   Password: " + rawPassword);
                 return;
             }
-
-            // 2. Hash password
             System.out.println("[2] Mã hóa mật khẩu...");
             String hashedPassword = PasswordUtil.hash(rawPassword);
             System.out.println("    ✓ Hash thành công");
-
-            // 3. Tạo Admin object
             System.out.println("[3] Tạo tài khoản Admin...");
             String adminId = UUID.randomUUID().toString();
             Admin admin = new Admin(adminId, username, email, hashedPassword, adminLevel);
             admin.setActive(true);
             System.out.println("    ✓ Admin object tạo thành công");
-
-            // 4. Lưu vào database
             System.out.println("[4] Lưu vào database...");
             userDAO.save(admin);
             System.out.println("    ✓ Lưu thành công!");
-
-            // 5. Kiểm tra lại
             System.out.println("[5] Xác nhận...");
             Optional<com.auction.shared.model.User> saved = userDAO.findByUsername(username);
             if (saved.isPresent()) {

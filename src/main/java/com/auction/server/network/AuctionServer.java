@@ -339,6 +339,9 @@ public class AuctionServer {
                                 out.flush();
                                 break;
                             }
+                            Message bidResult = null;
+                            Message outbidMsg = null;
+                            Message newBidMsg = null;
                             try {
                                 @SuppressWarnings("unchecked")
                                 HashMap<String, Object> p = (HashMap<String, Object>) request.getPayload();
@@ -347,79 +350,96 @@ public class AuctionServer {
 
                                 Bidder bidder = (Bidder) currentUser;
 
-                                // Lấy phiên từ AuctionManager (in-memory) trước, fallback sang DB
+                                // Lấy phiên (load DB nếu chưa có trong memory)
                                 Auction auction = AuctionManager.getInstance().getAuction(auctionId);
                                 if (auction == null) {
-                                    // Load từ DB nếu chưa có trong memory
                                     auction = auctionDAO.findById(auctionId)
                                             .orElseThrow(() -> new IllegalArgumentException(
                                                     "Không tìm thấy phiên đấu giá: " + auctionId));
-                                    // Load luôn bid history từ DB vào in-memory
                                     List<BidTransaction> existingBids =
                                             bidTransactionDAO.findByAuction(auctionId);
-                                    for (BidTransaction tx : existingBids) {
-                                        auction.injectBid(tx);
-                                    }
+                                    for (BidTransaction tx : existingBids) auction.injectBid(tx);
                                     AuctionManager.getInstance().registerAuction(auction);
                                 }
 
-                                // Kiểm tra giá hợp lệ
-                                if (amount <= auction.getCurrentPrice()) {
-                                    out.writeObject(new Message("PLACE_BID_FAILED",
-                                            String.format("Giá phải cao hơn %,.0f đ!", auction.getCurrentPrice())));
-                                    out.flush();
-                                    break;
+                                // ── CRITICAL SECTION ──────────────────────────
+                                // Đồng bộ trên object auction để tránh race condition:
+                                // Hai thread không thể vào cùng lúc → loại bỏ lost update
+                                // và duplicate BidTransaction khi nhiều bidder đặt gần đồng thời.
+                                BidTransaction tx;
+                                Bidder previousLeader;
+                                synchronized (auction) {
+                                    // Kiểm tra lại trạng thái bên trong lock
+                                    if (auction.getStatus() != com.auction.shared.model.AuctionStatus.OPEN
+                                            && auction.getStatus() != com.auction.shared.model.AuctionStatus.RUNNING) {
+                                        bidResult = new Message("PLACE_BID_FAILED", "Phiên đấu giá đã đóng!");
+                                        break;
+                                    }
+
+                                    // Kiểm tra giá hợp lệ (bên trong lock — đảm bảo currentPrice không đổi giữa chừng)
+                                    if (amount <= auction.getCurrentPrice()) {
+                                        bidResult = new Message("PLACE_BID_FAILED",
+                                                String.format("Giá phải cao hơn %,.0f đ!", auction.getCurrentPrice()));
+                                        break;
+                                    }
+
+                                    // Kiểm tra số dư khả dụng
+                                    double oldFrozen   = bidder.getFrozenForAuction(auctionId);
+                                    double extraNeeded = amount - oldFrozen;
+                                    if (bidder.getAvailableBalance() < extraNeeded) {
+                                        bidResult = new Message("PLACE_BID_FAILED",
+                                                String.format("Số dư không đủ! Cần thêm %,.0f đ (khả dụng: %,.0f đ)",
+                                                        extraNeeded, bidder.getAvailableBalance()));
+                                        break;
+                                    }
+
+                                    previousLeader = auction.getLeadingBidder();
+
+                                    // Freeze tiền bidder mới
+                                    bidder.freezeForAuction(auctionId, amount);
+                                    userDAO.updateFrozenBalance(bidder.getId(), bidder.getFrozenBalance());
+
+                                    // Unfreeze bidder bị vượt (nếu khác người)
+                                    if (previousLeader != null
+                                            && !previousLeader.getId().equals(bidder.getId())) {
+                                        previousLeader.unfreezeForAuction(auctionId);
+                                        userDAO.updateFrozenBalance(previousLeader.getId(),
+                                                previousLeader.getFrozenBalance());
+                                        System.out.printf("[Server] Unfreeze outbid: %s%n",
+                                                previousLeader.getUsername());
+                                    }
+
+                                    // Cập nhật in-memory auction
+                                    auction.placeBid(bidder, amount);
+
+                                    // Lưu BidTransaction + cập nhật auction trong DB
+                                    tx = new BidTransaction(bidder, amount, auctionId);
+                                    bidTransactionDAO.save(tx);
+                                    auctionDAO.update(auction);
+
+                                    // ── Anti-sniping: nếu bid trong 60 giây cuối → gia hạn thêm 60 giây
+                                    long secsLeft = java.time.temporal.ChronoUnit.SECONDS.between(
+                                            java.time.LocalDateTime.now(), auction.getEndTime());
+                                    if (secsLeft <= 60) {
+                                        AuctionManager.getInstance().extendAuction(auctionId, 60);
+                                        auctionDAO.updateEndTime(auctionId, auction.getEndTime());
+                                        System.out.printf("[Anti-snipe] Phiên %s gia hạn thêm 60s (còn %ds)%n",
+                                                auctionId, secsLeft);
+                                        // Thông báo gia hạn tới tất cả client
+                                        HashMap<String, Object> extPayload = new HashMap<>();
+                                        extPayload.put("auctionId", auctionId);
+                                        extPayload.put("newEndTime", auction.getEndTime().toString());
+                                        broadcast(new Message("AUCTION_EXTENDED", extPayload), null);
+                                    }
                                 }
+                                // ── END CRITICAL SECTION ──────────────────────
 
-                                // Kiểm tra và cập nhật số dư theo cơ chế freeze:
-                                // - Số tiền cần giữ thêm = amount - oldFrozen (nếu đã bid phiên này)
-                                // - Không trừ thẳng balance, chỉ freeze phần chênh lệch
-                                double oldFrozen = bidder.getFrozenForAuction(auctionId);
-                                double extraNeeded = amount - oldFrozen;
-                                if (bidder.getAvailableBalance() < extraNeeded) {
-                                    out.writeObject(new Message("PLACE_BID_FAILED",
-                                            String.format("Số dư khả dụng không đủ! Cần thêm %,.0f đ (khả dụng: %,.0f đ)",
-                                                    extraNeeded, bidder.getAvailableBalance())));
-                                    out.flush();
-                                    break;
-                                }
+                                bidResult = new Message("PLACE_BID_SUCCESS", tx);
 
-                                // Lưu lại bidder đang dẫn đầu TRƯỚC khi bị vượt
-                                Bidder previousLeader = auction.getLeadingBidder();
+                                // Broadcast NEW_BID tới tất cả client
+                                newBidMsg = new Message("NEW_BID", tx);
 
-                                // Freeze tiền: cập nhật frozenBalance bidder mới
-                                bidder.freezeForAuction(auctionId, amount);
-                                userDAO.updateFrozenBalance(bidder.getId(), bidder.getFrozenBalance());
-
-                                // Unfreeze cho bidder cũ nếu bị outbid bởi người khác
-                                if (previousLeader != null
-                                        && !previousLeader.getId().equals(bidder.getId())) {
-                                    previousLeader.unfreezeForAuction(auctionId);
-                                    userDAO.updateFrozenBalance(previousLeader.getId(),
-                                            previousLeader.getFrozenBalance());
-                                    System.out.printf("[Server] Unfreeze outbid: %s (giải phóng %.0f đ)%n",
-                                            previousLeader.getUsername(),
-                                            previousLeader.getFrozenForAuction(auctionId));
-                                }
-
-                                // Thực hiện đặt giá (cập nhật in-memory auction)
-                                auction.placeBid(bidder, amount);
-
-                                // Tạo BidTransaction và lưu vào DB
-                                BidTransaction tx = new BidTransaction(bidder, amount, auctionId);
-                                bidTransactionDAO.save(tx);
-
-                                // Cập nhật auction trong DB (current_price, status)
-                                auctionDAO.update(auction);
-
-                                // Gửi kết quả về người đặt (kèm bidder đã cập nhật frozen)
-                                out.writeObject(new Message("PLACE_BID_SUCCESS", tx));
-                                out.flush();
-
-                                // Broadcast NEW_BID tới tất cả client khác đang xem
-                                broadcast(new Message("NEW_BID", tx), this);
-
-                                // Nếu có người bị outbid → broadcast để client đó cập nhật số dư
+                                // Broadcast OUTBID_NOTIFY cho người bị vượt
                                 if (previousLeader != null
                                         && !previousLeader.getId().equals(bidder.getId())) {
                                     HashMap<String, Object> outbidPayload = new HashMap<>();
@@ -427,20 +447,22 @@ public class AuctionServer {
                                     outbidPayload.put("bidderId", previousLeader.getId());
                                     outbidPayload.put("newBalance", previousLeader.getBalance());
                                     outbidPayload.put("newFrozen", previousLeader.getFrozenBalance());
-                                    broadcast(new Message("OUTBID_NOTIFY", outbidPayload), null);
+                                    outbidMsg = new Message("OUTBID_NOTIFY", outbidPayload);
                                 }
 
-                                System.out.printf("[Server] PLACE_BID OK: %s đặt %.0f vào %s (frozen: %.0f)%n",
-                                        bidder.getUsername(), amount, auctionId, bidder.getFrozenBalance());
+                                System.out.printf("[Server] PLACE_BID OK: %s đặt %.0f vào %s%n",
+                                        bidder.getUsername(), amount, auctionId);
 
                             } catch (IllegalArgumentException e) {
-                                out.writeObject(new Message("PLACE_BID_FAILED", e.getMessage()));
-                                out.flush();
+                                bidResult = new Message("PLACE_BID_FAILED", e.getMessage());
                             } catch (Exception e) {
-                                out.writeObject(new Message("PLACE_BID_FAILED", "Lỗi server: " + e.getMessage()));
+                                bidResult = new Message("PLACE_BID_FAILED", "Lỗi server: " + e.getMessage());
                                 e.printStackTrace();
-                                out.flush();
                             }
+                            // Gửi kết quả ra ngoài synchronized block để không giữ lock khi I/O
+                            if (bidResult != null) { out.writeObject(bidResult); out.flush(); }
+                            if (newBidMsg  != null) broadcast(newBidMsg, this);
+                            if (outbidMsg  != null) broadcast(outbidMsg, null);
                         }
 
                         // ── NẠP TIỀN ─────────────────────────────────────────
