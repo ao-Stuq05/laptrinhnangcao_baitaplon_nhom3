@@ -29,7 +29,7 @@ public class ServerConnection {
     private Consumer<String>               outbidCallback;
     /** Callback khi phiên bị gia hạn do anti-sniping — nhận (auctionId, newEndTime) */
     private java.util.function.BiConsumer<String, String> auctionExtendedCallback;
-    
+
     // ── Admin Callbacks ────────────────────────────────────────────────────────
     private Consumer<List<User>>           adminUserCallback;
     private Consumer<List<Auction>>        adminAuctionCallback;
@@ -117,7 +117,7 @@ public class ServerConnection {
                 Auction a = (Auction) msg.getPayload();
                 Platform.runLater(() -> {
                     alert("Đăng bán thành công",
-                            "\"" + a.getItem().getName() + "\" đã được đăng!",
+                            "\"" + a.getItem().getName() + "\" đã được gửi và đang chờ admin duyệt!",
                             javafx.scene.control.Alert.AlertType.INFORMATION);
                     SceneManager.switchScene("UI.fxml");
                 });
@@ -293,7 +293,7 @@ public class ServerConnection {
                 @SuppressWarnings("unchecked") List<Auction> list = (List<Auction>) msg.getPayload();
                 if (adminAuctionCallback != null) Platform.runLater(() -> adminAuctionCallback.accept(list));
             }
-            
+
             // Tích hợp Null-Guard từ phiên bản 2 phòng trừ lỗi NPE khi server trả về payload rỗng
             case "APPROVE_AUCTION_SUCCESS" -> {
                 String auctionId = (String) msg.getPayload();

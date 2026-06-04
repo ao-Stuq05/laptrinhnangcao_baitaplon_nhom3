@@ -110,9 +110,10 @@ public class CreateAuctionController {
             cbCategory.setValue(displayCat);
         }
 
-        // Tính thời gian còn lại (giờ/phút) từ endTime
-        long totalMinutes = java.time.temporal.ChronoUnit.MINUTES.between(
+        // [FIX] Dung SECONDS.between + round up de tranh floor mat ~1 phut khi edit
+        long totalSecs = java.time.temporal.ChronoUnit.SECONDS.between(
                 LocalDateTime.now(), auction.getEndTime());
+        long totalMinutes = (totalSecs + 59) / 60; // round up: 1:59:45 -> 120 phut
         if (totalMinutes > 0) {
             txtDurationHours.setText(String.valueOf(totalMinutes / 60));
             txtDurationMinutes.setText(String.valueOf(totalMinutes % 60));
@@ -192,31 +193,30 @@ public class CreateAuctionController {
 
         hideError();
 
-        LocalDateTime startDateTime = LocalDateTime.now();
-        LocalDateTime endDateTime   = startDateTime
-                .plusHours(durationHours)
-                .plusMinutes(durationMinutes);
-        DateTimeFormatter isoFmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        // [FIX] Encode anh TRUOC khi gui, va gui durationSeconds thay vi endDateTime.
+        // Server tu tinh endTime = LocalDateTime.now() + durationSeconds bang dong ho
+        // cua chinh server, tranh lech clock giua client va server (hoac do tre upload).
+        String imageBase64 = null;
+        if (selectedImageFile != null) {
+            try {
+                byte[] imageBytes = java.nio.file.Files.readAllBytes(selectedImageFile.toPath());
+                imageBase64 = java.util.Base64.getEncoder().encodeToString(imageBytes);
+            } catch (Exception imgEx) {
+                System.out.println("[CreateAuction] Khong doc duoc file anh: " + imgEx.getMessage());
+            }
+        }
+        long durationSeconds = (long) durationHours * 3600L + (long) durationMinutes * 60L;
 
         try {
             HashMap<String, Object> payload = new HashMap<>();
-            payload.put("name",          name);
-            payload.put("category",      category);
-            payload.put("condition",     condition);
-            payload.put("description",   desc);
-            payload.put("startPrice",    startPrice);
-            payload.put("startDateTime", startDateTime.format(isoFmt));
-            payload.put("endDateTime",   endDateTime.format(isoFmt));
+            payload.put("name",            name);
+            payload.put("category",        category);
+            payload.put("condition",       condition);
+            payload.put("description",     desc);
+            payload.put("startPrice",      startPrice);
+            payload.put("durationSeconds", durationSeconds);
+            if (imageBase64 != null) payload.put("imageBase64", imageBase64);
 
-            if (selectedImageFile != null) {
-                try {
-                    byte[] imageBytes = Files.readAllBytes(selectedImageFile.toPath());
-                    String imageBase64 = Base64.getEncoder().encodeToString(imageBytes);
-                    payload.put("imageBase64", imageBase64);
-                } catch (Exception imgEx) {
-                    System.out.println("⚠ Không đọc được file ảnh: " + imgEx.getMessage());
-                }
-            }
 
             if (editingAuction != null) {
                 // ── Chế độ chỉnh sửa: gửi UPDATE_AUCTION kèm auctionId ──────

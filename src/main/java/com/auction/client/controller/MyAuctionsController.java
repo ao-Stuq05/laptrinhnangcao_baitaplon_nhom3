@@ -44,7 +44,7 @@ public class MyAuctionsController {
     // ── initialize ─────────────────────────────────────────────────────────────
     @FXML
     public void initialize() {
-        cbStatusFilter.getItems().addAll("Tất cả", "Đang chạy", "Đã kết thúc", "Đã hủy");
+        cbStatusFilter.getItems().addAll("Tất cả", "Chờ duyệt", "Đang chạy", "Đã kết thúc", "Đã hủy");
         cbStatusFilter.setValue("Tất cả");
         cbStatusFilter.setOnAction(e -> applyFilter());
 
@@ -86,6 +86,9 @@ public class MyAuctionsController {
     private void applyFilter() {
         String selected = cbStatusFilter.getValue();
         filtered = switch (selected) {
+            case "Chờ duyệt"   -> allAuctions.stream()
+                    .filter(a -> a.getStatus() == AuctionStatus.PENDING_APPROVAL)
+                    .collect(Collectors.toList());
             case "Đang chạy"   -> allAuctions.stream()
                     .filter(a -> a.getStatus() == AuctionStatus.OPEN
                             || a.getStatus() == AuctionStatus.RUNNING)
@@ -224,8 +227,9 @@ public class MyAuctionsController {
 
         boolean isActive = auction.getStatus() == AuctionStatus.OPEN
                 || auction.getStatus() == AuctionStatus.RUNNING;
+        boolean isPending = auction.getStatus() == AuctionStatus.PENDING_APPROVAL;
         btnEdit.setDisable(!isActive);
-        btnCancel.setDisable(!isActive);
+        btnCancel.setDisable(!isActive && !isPending);
 
         btnEdit.setOnAction(e -> handleEdit(auction));
         btnCancel.setOnAction(e -> handleCancel(auction));
@@ -290,6 +294,7 @@ public class MyAuctionsController {
     private Label buildStatusLabel(AuctionStatus status) {
         Label lbl = new Label();
         switch (status) {
+            case PENDING_APPROVAL -> { lbl.setText("⏳ Chờ duyệt");    lbl.setTextFill(Color.web("#f59e0b")); }
             case OPEN      -> { lbl.setText("● Đang mở");     lbl.setTextFill(Color.LIGHTGREEN); }
             case RUNNING   -> { lbl.setText("● Đang chạy");   lbl.setTextFill(Color.web("#00ccff")); }
             case FINISHED  -> { lbl.setText("● Đã kết thúc"); lbl.setTextFill(Color.SALMON); }

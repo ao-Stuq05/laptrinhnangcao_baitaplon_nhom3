@@ -71,6 +71,7 @@ public class DatabaseManager {
                 is_active TINYINT(1) NOT NULL DEFAULT 1,
                 shop_name VARCHAR(100),
                 balance DOUBLE NOT NULL DEFAULT 0.0,
+                frozen_balance DOUBLE DEFAULT 0.0,
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL
             ) ENGINE=InnoDB;
@@ -83,8 +84,9 @@ public class DatabaseManager {
                 name VARCHAR(255) NOT NULL,
                 description TEXT,
                 base_price DOUBLE NOT NULL CHECK(base_price > 0),
-                category ENUM('ELECTRONICS','ART','VEHICLE') NOT NULL,
+                category ENUM('ELECTRONICS','ART','VEHICLE','JEWELRY','OTHER') NOT NULL,
                 seller_id VARCHAR(50) NOT NULL,
+                image_data LONGTEXT,
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL,
                 FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE
@@ -97,7 +99,7 @@ public class DatabaseManager {
                 id VARCHAR(50) PRIMARY KEY,
                 item_id VARCHAR(50) NOT NULL,
                 seller_id VARCHAR(50) NOT NULL,
-                status ENUM('OPEN', 'CLOSED', 'CANCELLED', 'RUNNING', 'FINISHED', 'PAID') DEFAULT 'OPEN',
+                status ENUM('PENDING_APPROVAL','OPEN', 'CLOSED', 'CANCELLED', 'RUNNING', 'FINISHED', 'PAID') DEFAULT 'OPEN',
                 current_price DOUBLE NOT NULL,
                 start_time DATETIME NOT NULL,
                 end_time DATETIME NOT NULL,
@@ -123,6 +125,10 @@ public class DatabaseManager {
                 FOREIGN KEY (bidder_id) REFERENCES users(id) ON DELETE CASCADE
             ) ENGINE=InnoDB;
         """);
+        // Tự động cập nhật cấu trúc Enum nếu bảng đã tồn tại từ trước
+        stmt.execute("ALTER TABLE items MODIFY COLUMN category ENUM('ELECTRONICS','ART','VEHICLE','JEWELRY','OTHER') NOT NULL;");
+        stmt.execute("ALTER TABLE auctions MODIFY COLUMN status ENUM('PENDING_APPROVAL','OPEN', 'CLOSED', 'CANCELLED', 'RUNNING', 'FINISHED', 'PAID') DEFAULT 'OPEN';");
+        stmt.execute("ALTER TABLE users ADD COLUMN frozen_balance DOUBLE DEFAULT 0.0;");
 
         System.out.println("[DB] Đã khởi tạo cấu trúc bảng thành công.");
     }

@@ -186,12 +186,13 @@ public class UIController {
         Label lblPrice = new Label(String.format("Giá HT: %,.0fđ", auction.getCurrentPrice()));
         lblPrice.setTextFill(Color.WHITE);
 
-        long minutesLeft = ChronoUnit.MINUTES.between(LocalDateTime.now(), auction.getEndTime());
-        String timeText = minutesLeft > 0
+        long secondsLeft = ChronoUnit.SECONDS.between(LocalDateTime.now(), auction.getEndTime());
+        long minutesLeft = (secondsLeft + 59) / 60;
+        String timeText = secondsLeft > 0
                 ? String.format("Còn: %d giờ %d phút", minutesLeft / 60, minutesLeft % 60)
                 : "Đã kết thúc";
         Label lblTime = new Label(timeText);
-        lblTime.setTextFill(minutesLeft > 0 ? Color.LIGHTGREEN : Color.SALMON);
+        lblTime.setTextFill(secondsLeft > 0 ? Color.LIGHTGREEN : Color.SALMON);
 
         String catDisplay = switch (auction.getItem().getCategory().toUpperCase()) {
             case "ELECTRONICS" -> "Điện tử";
