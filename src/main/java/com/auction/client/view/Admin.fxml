@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity"
+            prefHeight="720.0" prefWidth="1280.0"
+            xmlns="http://javafx.com/javafx/17.0.12"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.auction.client.controller.AdminController">
+    <children>
+
+        <!-- Background — opacity 0.82 giống UI.fxml / Profile.fxml -->
+        <ImageView fitHeight="720.0" fitWidth="1280.0" opacity="0.82"
+                   pickOnBounds="true" preserveRatio="false"
+                   AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
+                   AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <image><Image url="@/assets/background.jpg"/></image>
+        </ImageView>
+
+        <HBox spacing="0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
+              AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+
+            <!-- ===== SIDEBAR — cùng style rgba semi-transparent như UI.fxml/Profile.fxml ===== -->
+            <VBox prefWidth="160.0" minWidth="160.0"
+                  style="-fx-background-color: rgba(0,0,0,0.35); -fx-border-color: rgba(255,255,255,0.12); -fx-border-width: 0 1 0 0;">
+                <children>
+
+                    <!-- Logo -->
+                    <VBox alignment="CENTER" spacing="4.0"
+                          style="-fx-padding: 20 10 16 10; -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 0 0 1 0;">
+                        <children>
+                            <Label text="🏆 ĐẤU GIÁ" textFill="#e2ff00">
+                                <font><Font name="System Bold" size="17.0"/></font>
+                            </Label>
+                            <Label text="ADMIN PANEL" textFill="rgba(255,255,255,0.70)">
+                                <font><Font name="System Bold" size="11.0"/></font>
+                            </Label>
+                        </children>
+                    </VBox>
+
+                    <!-- Nav buttons -->
+                    <VBox spacing="4.0" style="-fx-padding: 12 8 12 8;">
+                        <children>
+                            <Button fx:id="btnDashboard" maxWidth="Infinity" mnemonicParsing="false"
+                                    text="📊  Dashboard"
+                                    style="-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-background-radius: 6; -fx-cursor: hand;"
+                                    onAction="#handleShowDashboard">
+                                <font><Font name="System Bold" size="13.0"/></font>
+                            </Button>
+                            <Button fx:id="btnUsers" maxWidth="Infinity" mnemonicParsing="false"
+                                    text="👥  Người dùng"
+                                    style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;"
+                                    onAction="#handleShowUsers">
+                                <font><Font name="System Bold" size="13.0"/></font>
+                            </Button>
+                            <Button fx:id="btnApprovals" maxWidth="Infinity" mnemonicParsing="false"
+                                    text="✅  Duyệt phiên"
+                                    style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;"
+                                    onAction="#handleShowApprovals">
+                                <font><Font name="System Bold" size="13.0"/></font>
+                            </Button>
+                            <Button fx:id="btnLive" maxWidth="Infinity" mnemonicParsing="false"
+                                    text="🔴  Đang diễn ra"
+                                    style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;"
+                                    onAction="#handleShowLive">
+                                <font><Font name="System Bold" size="13.0"/></font>
+                            </Button>
+                            <Button fx:id="btnHistory" maxWidth="Infinity" mnemonicParsing="false"
+                                    text="📋  Lịch sử"
+                                    style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;"
+                                    onAction="#handleShowHistory">
+                                <font><Font name="System Bold" size="13.0"/></font>
+                            </Button>
+                        </children>
+                    </VBox>
+
+                    <Region VBox.vgrow="ALWAYS"/>
+
+                    <!-- Logout — dùng rgba + border-radius giống UI.fxml/Profile.fxml -->
+                    <VBox style="-fx-padding: 12 8 16 8; -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 1 0 0 0;">
+                        <children>
+                            <Button fx:id="btnLogout" maxWidth="Infinity" mnemonicParsing="false"
+                                    text="ĐĂNG XUẤT"
+                                    style="-fx-background-color: rgba(180,30,30,0.55); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 10 14; -fx-border-color: rgba(255,255,255,0.15); -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;"
+                                    onAction="#handleLogout">
+                                <font><Font name="System Bold" size="13.0"/></font>
+                            </Button>
+                        </children>
+                    </VBox>
+
+                </children>
+            </VBox>
+
+            <!-- ===== MAIN CONTENT — transparent để thấy background, giống UI.fxml ===== -->
+            <VBox HBox.hgrow="ALWAYS" style="-fx-padding: 20 20 20 20;" spacing="16.0">
+                <children>
+
+                    <!-- Top bar -->
+                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                        <children>
+                            <Label text="ADMIN DASHBOARD" textFill="#e2ff00">
+                                <font><Font name="System Bold" size="18.0"/></font>
+                            </Label>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <!-- Search — border-radius: 6 giống TextField ở UI.fxml/Profile.fxml -->
+                            <TextField fx:id="txtSearchAdmin"
+                                       promptText="🔍  Tìm user / sản phẩm..."
+                                       prefHeight="38.0" prefWidth="300.0"
+                                       style="-fx-background-color: rgba(255,255,255,0.92); -fx-border-color: transparent; -fx-background-radius: 6; -fx-border-radius: 6; -fx-text-fill: #1a1a2e; -fx-prompt-text-fill: rgba(0,0,0,0.35); -fx-font-size: 13px; -fx-padding: 0 12;">
+                                <font><Font name="Corbel Italic" size="13.0"/></font>
+                            </TextField>
+                        </children>
+                    </HBox>
+
+                    <!-- Stat cards — dùng rgba semi-transparent giống card trong các màn khác -->
+                    <HBox spacing="14.0">
+                        <children>
+                            <VBox prefWidth="190.0" prefHeight="90.0" spacing="4.0"
+                                  style="-fx-background-color: rgba(0,0,0,0.30); -fx-background-radius: 10; -fx-padding: 14 16 14 16; -fx-border-color: rgba(34,211,238,0.30); -fx-border-radius: 10; -fx-border-width: 1;">
+                                <children>
+                                    <Label text="TỔNG NGƯỜI DÙNG" textFill="#888888">
+                                        <font><Font size="11.0"/></font>
+                                    </Label>
+                                    <Label fx:id="lblTotalUsers" text="0" textFill="#22d3ee">
+                                        <font><Font name="System Bold" size="34.0"/></font>
+                                    </Label>
+                                </children>
+                            </VBox>
+                            <VBox prefWidth="190.0" prefHeight="90.0" spacing="4.0"
+                                  style="-fx-background-color: rgba(0,0,0,0.30); -fx-background-radius: 10; -fx-padding: 14 16 14 16; -fx-border-color: rgba(245,158,11,0.30); -fx-border-radius: 10; -fx-border-width: 1;">
+                                <children>
+                                    <Label text="CHỜ DUYỆT" textFill="#888888">
+                                        <font><Font size="11.0"/></font>
+                                    </Label>
+                                    <Label fx:id="lblPending" text="0" textFill="#f59e0b">
+                                        <font><Font name="System Bold" size="34.0"/></font>
+                                    </Label>
+                                </children>
+                            </VBox>
+                            <VBox prefWidth="190.0" prefHeight="90.0" spacing="4.0"
+                                  style="-fx-background-color: rgba(0,0,0,0.30); -fx-background-radius: 10; -fx-padding: 14 16 14 16; -fx-border-color: rgba(74,222,128,0.30); -fx-border-radius: 10; -fx-border-width: 1;">
+                                <children>
+                                    <Label text="ĐANG DIỄN RA" textFill="#888888">
+                                        <font><Font size="11.0"/></font>
+                                    </Label>
+                                    <Label fx:id="lblLive" text="0" textFill="#4ade80">
+                                        <font><Font name="System Bold" size="34.0"/></font>
+                                    </Label>
+                                </children>
+                            </VBox>
+                        </children>
+                    </HBox>
+
+                    <!-- Bảng Người dùng -->
+                    <VBox VBox.vgrow="ALWAYS" spacing="8.0"
+                          style="-fx-background-color: rgba(0,0,0,0.30); -fx-background-radius: 10; -fx-padding: 14 16 14 16; -fx-border-color: rgba(255,255,255,0.10); -fx-border-radius: 10; -fx-border-width: 1;">
+                        <children>
+                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                <children>
+                                    <Label text="NGƯỜI DÙNG" textFill="#22d3ee">
+                                        <font><Font name="System Bold" size="14.0"/></font>
+                                    </Label>
+                                    <Label fx:id="lblUserCount" text="(0)" textFill="#888888">
+                                        <font><Font size="12.0"/></font>
+                                    </Label>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Button text="↻ Làm mới" mnemonicParsing="false"
+                                            onAction="#handleRefreshUsers"
+                                            style="-fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: #cccccc; -fx-background-radius: 4; -fx-border-color: rgba(255,255,255,0.20); -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 5 12; -fx-cursor: hand;"/>
+                                </children>
+                            </HBox>
+                            <TableView fx:id="tableUsers" VBox.vgrow="ALWAYS"
+                                       style="-fx-background-color: transparent; -fx-border-color: rgba(255,255,255,0.10); -fx-border-radius: 6;">
+                                <columns>
+                                    <TableColumn fx:id="colUserName"   text="Email"    prefWidth="220"/>
+                                    <TableColumn fx:id="colUsername"   text="Username" prefWidth="150"/>
+                                    <TableColumn fx:id="colRole"       text="Vai trò"  prefWidth="100"/>
+                                    <TableColumn fx:id="colBalance"    text="Số dư"    prefWidth="140"/>
+                                    <TableColumn fx:id="colUserAction" text="Thao tác" prefWidth="110"/>
+                                </columns>
+                            </TableView>
+                        </children>
+                    </VBox>
+
+                    <!-- Bảng Chờ duyệt + Live (2 cột) -->
+                    <HBox spacing="14.0" prefHeight="250.0">
+                        <children>
+
+                            <!-- Chờ duyệt -->
+                            <VBox HBox.hgrow="ALWAYS" spacing="8.0"
+                                  style="-fx-background-color: rgba(0,0,0,0.30); -fx-background-radius: 10; -fx-padding: 14 16 14 16; -fx-border-color: rgba(255,255,255,0.10); -fx-border-radius: 10; -fx-border-width: 1;">
+                                <children>
+                                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                        <children>
+                                            <Label text="CHỜ DUYỆT" textFill="#f59e0b">
+                                                <font><Font name="System Bold" size="14.0"/></font>
+                                            </Label>
+                                            <Label fx:id="lblPendingCount" text="(0)" textFill="#888888">
+                                                <font><Font size="12.0"/></font>
+                                            </Label>
+                                            <Region HBox.hgrow="ALWAYS"/>
+                                            <Button text="↻" mnemonicParsing="false"
+                                                    onAction="#handleRefreshPending"
+                                                    style="-fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: #cccccc; -fx-background-radius: 4; -fx-border-color: rgba(255,255,255,0.20); -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 5 10; -fx-cursor: hand;"/>
+                                        </children>
+                                    </HBox>
+                                    <TableView fx:id="tablePending" VBox.vgrow="ALWAYS"
+                                               style="-fx-background-color: transparent; -fx-border-color: rgba(255,255,255,0.10); -fx-border-radius: 6;">
+                                        <columns>
+                                            <TableColumn fx:id="colPendingItem"   text="Sản phẩm" prefWidth="160"/>
+                                            <TableColumn fx:id="colPendingSeller" text="Seller"   prefWidth="110"/>
+                                            <TableColumn fx:id="colPendingPrice"  text="Giá khởi" prefWidth="110"/>
+                                            <TableColumn fx:id="colPendingAction" text="Thao tác" prefWidth="150"/>
+                                        </columns>
+                                    </TableView>
+                                </children>
+                            </VBox>
+
+                            <!-- Đang diễn ra -->
+                            <VBox HBox.hgrow="ALWAYS" spacing="8.0"
+                                  style="-fx-background-color: rgba(0,0,0,0.30); -fx-background-radius: 10; -fx-padding: 14 16 14 16; -fx-border-color: rgba(255,255,255,0.10); -fx-border-radius: 10; -fx-border-width: 1;">
+                                <children>
+                                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                        <children>
+                                            <Label text="ĐANG DIỄN RA" textFill="#4ade80">
+                                                <font><Font name="System Bold" size="14.0"/></font>
+                                            </Label>
+                                            <Label fx:id="lblLiveCount" text="(0 live)" textFill="#888888">
+                                                <font><Font size="12.0"/></font>
+                                            </Label>
+                                            <Region HBox.hgrow="ALWAYS"/>
+                                            <Button text="↻" mnemonicParsing="false"
+                                                    onAction="#handleRefreshLive"
+                                                    style="-fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: #cccccc; -fx-background-radius: 4; -fx-border-color: rgba(255,255,255,0.20); -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 5 10; -fx-cursor: hand;"/>
+                                        </children>
+                                    </HBox>
+                                    <TableView fx:id="tableLiveAuctions" VBox.vgrow="ALWAYS"
+                                               style="-fx-background-color: transparent; -fx-border-color: rgba(255,255,255,0.10); -fx-border-radius: 6;">
+                                        <columns>
+                                            <TableColumn fx:id="colLiveItem"   text="Sản phẩm"    prefWidth="140"/>
+                                            <TableColumn fx:id="colLiveSeller" text="Seller"       prefWidth="100"/>
+                                            <TableColumn fx:id="colLivePrice"  text="Giá hiện tại" prefWidth="120"/>
+                                            <TableColumn fx:id="colLiveBids"   text="Lượt bid"     prefWidth="80"/>
+                                            <TableColumn fx:id="colLiveTime"   text="Còn lại"      prefWidth="90"/>
+                                            <TableColumn fx:id="colLiveStatus" text="Trạng thái"   prefWidth="100"/>
+                                        </columns>
+                                    </TableView>
+                                </children>
+                            </VBox>
+
+                        </children>
+                    </HBox>
+
+                </children>
+            </VBox>
+
+        </HBox>
+    </children>
+</AnchorPane>

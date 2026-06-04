@@ -27,7 +27,7 @@ public class ServerConnection {
     private Consumer<Auction>              auctionClosedCallback;
     /** Callback khi bị người khác vượt giá — nhận auctionId để ProductController refresh balance */
     private Consumer<String>               outbidCallback;
-    
+
     // ── Admin Callbacks ────────────────────────────────────────────────────────
     private Consumer<List<User>>           adminUserCallback;
     private Consumer<List<Auction>>        adminAuctionCallback;
@@ -282,17 +282,22 @@ public class ServerConnection {
                 @SuppressWarnings("unchecked") List<Auction> list = (List<Auction>) msg.getPayload();
                 if (adminAuctionCallback != null) Platform.runLater(() -> adminAuctionCallback.accept(list));
             }
+            // [FIX 1] Thêm null-guard cho payload: server trả null khi thao tác thất bại.
+            // Nếu không kiểm tra, callback trong AdminController gọi equals() trên null → NPE.
             case "APPROVE_AUCTION_SUCCESS" -> {
                 String auctionId = (String) msg.getPayload();
-                if (adminApproveCallback != null) Platform.runLater(() -> adminApproveCallback.accept(auctionId));
+                if (auctionId != null && adminApproveCallback != null)
+                    Platform.runLater(() -> adminApproveCallback.accept(auctionId));
             }
             case "REJECT_AUCTION_SUCCESS" -> {
                 String auctionId = (String) msg.getPayload();
-                if (adminRejectCallback != null) Platform.runLater(() -> adminRejectCallback.accept(auctionId));
+                if (auctionId != null && adminRejectCallback != null)
+                    Platform.runLater(() -> adminRejectCallback.accept(auctionId));
             }
             case "BAN_USER_SUCCESS" -> {
                 String userId = (String) msg.getPayload();
-                if (adminBanCallback != null) Platform.runLater(() -> adminBanCallback.accept(userId));
+                if (userId != null && adminBanCallback != null)
+                    Platform.runLater(() -> adminBanCallback.accept(userId));
             }
 
             default -> System.out.println("[Client] Không xử lý: " + msg.getType());

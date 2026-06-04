@@ -7,11 +7,11 @@ import java.sql.Statement;
 
 
 public class DatabaseManager {
-    
+
     private static final String DB_HOST = "jdbc:mysql://localhost:3306/";
     private static final String DB_NAME = "auction_db";
     private static final String DB_OPTIONS = "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
-    
+
     private static final String USER = "root";
     private static final String PASS = "";
 
