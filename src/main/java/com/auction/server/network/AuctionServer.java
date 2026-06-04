@@ -400,8 +400,7 @@ public class AuctionServer {
                                     userDAO.updateFrozenBalance(bidder.getId(), bidder.getFrozenBalance());
 
                                     // Unfreeze bidder bị vượt (nếu khác người)
-                                    if (previousLeader != null
-                                            && !previousLeader.getId().equals(bidder.getId())) {
+                                    if (previousLeader != null&& !previousLeader.getId().equals(bidder.getId())) {
                                         previousLeader.unfreezeForAuction(auctionId);
                                         userDAO.updateFrozenBalance(previousLeader.getId(),
                                                 previousLeader.getFrozenBalance());
