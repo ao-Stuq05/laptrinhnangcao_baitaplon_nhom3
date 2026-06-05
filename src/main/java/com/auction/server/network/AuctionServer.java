@@ -173,6 +173,19 @@ public class AuctionServer {
         }
     }
 
+    /** Broadcast chỉ tới các client đang đăng nhập với role Admin */
+    private static void broadcastToAdmins(Message msg) {
+        for (ClientHandler c : connectedClients) {
+            if (c.currentUser instanceof Admin) {
+                try {
+                    c.sendMessage(msg);
+                } catch (IOException e) {
+                    System.err.println("[BroadcastAdmin] Loi gui toi admin: " + e.getMessage());
+                }
+            }
+        }
+    }
+
     private class ClientHandler extends Thread {
         private Socket clientSocket;
         private ObjectOutputStream out;
@@ -251,20 +264,22 @@ public class AuctionServer {
                                 String category  = (String) payload.get("category");
                                 String desc      = (String) payload.get("description");
                                 double price     = (double) payload.get("startPrice");
-                                // Nhận LocalDateTime dạng ISO (yyyy-MM-ddTHH:mm:ss) từ client
-                                java.time.LocalDateTime startD = java.time.LocalDateTime.parse(
-                                        (String) payload.get("startDateTime"));
-                                java.time.LocalDateTime endD = java.time.LocalDateTime.parse(
-                                        (String) payload.get("endDateTime"));
+                                // [FIX] Nhận durationSeconds từ client, tính endTime theo đồng hồ server
+                                long durationSeconds = ((Number) payload.get("durationSeconds")).longValue();
+                                java.time.LocalDateTime startD = java.time.LocalDateTime.now();
+                                java.time.LocalDateTime endD   = startD.plusSeconds(durationSeconds);
 
                                 String itemId = UUID.randomUUID().toString();
-                                Item item = switch (category) {
-                                    case "Điện tử"            -> new Electronics(itemId, name, desc, price, seller, 12);
-                                    case "Nghệ thuật"         -> new Art(itemId, name, desc, price, seller, "Unknown", 2024);
-                                    case "Xe cộ"              -> new Vehicle(itemId, name, desc, price, seller, "Unknown", 0);
-                                    case "Đồng hồ & Trang sức",
-                                         "Cổ vật", "Khác"    -> new Electronics(itemId, name, desc, price, seller, 0);
-                                    default -> throw new IllegalArgumentException("Danh mục không hợp lệ: " + category);
+                                // [FIX] Chuẩn hoá category sang enum string để DB nhất quán
+                                String categoryEnum = switch (category) {
+                                    case "Nghệ thuật", "Nghệ thuật & Cổ vật" -> "ART";
+                                    case "Xe cộ", "Xe cội" -> "VEHICLE";
+                                    default -> "ELECTRONICS";
+                                };
+                                Item item = switch (categoryEnum) {
+                                    case "ART"     -> new Art(itemId, name, desc, price, seller, "Unknown", 2024);
+                                    case "VEHICLE" -> new Vehicle(itemId, name, desc, price, seller, "Unknown", 0);
+                                    default        -> new Electronics(itemId, name, desc, price, seller, 12);
                                 };
 
                                 // ── Gán Base64 ảnh vào item nếu có ─────────────
@@ -279,12 +294,16 @@ public class AuctionServer {
                                 String auctionId = "AUC-" + System.currentTimeMillis();
                                 Auction auction  = new Auction(auctionId, item, seller,
                                         startD, endD);
+                                // [FIX] Phải chờ admin duyệt trước khi mở phín
+                                auction.setStatus(com.auction.shared.model.AuctionStatus.PENDING_APPROVAL);
 
                                 auctionDAO.save(auction);
-                                AuctionManager.getInstance().registerAuction(auction);
+                                // Không register vào AuctionManager cho đến khi admin duyệt
 
                                 out.writeObject(new Message("CREATE_AUCTION_SUCCESS", auction));
                                 System.out.println("[Server] CREATE_AUCTION OK: " + auctionId);
+                                // Thông báo real-time tới admin về phiên chờ duyệt mới
+                                broadcastToAdmins(new Message("NEW_PENDING_AUCTION", auction));
 
                             } catch (IllegalArgumentException e) {
                                 out.writeObject(new Message("CREATE_AUCTION_FAILED", e.getMessage()));
@@ -891,6 +910,52 @@ public class AuctionServer {
                                 broadcast(new Message("BAN_USER_SUCCESS", userId), this);
                             } catch (Exception e) {
                                 out.writeObject(new Message("BAN_USER_SUCCESS", null));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── ADMIN: ĐÓNG PHIÊN ĐANG HOẠT ĐỘNG ────────────────
+                        case "ADMIN_CLOSE_AUCTION" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", null));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                String auctionId = (String) request.getPayload();
+                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
+                                if (auction == null) {
+                                    auction = auctionDAO.findById(auctionId).orElse(null);
+                                }
+                                if (auction == null) {
+                                    out.writeObject(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", null));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Chỉ đóng phiên đang OPEN hoặc RUNNING
+                                if (auction.getStatus() != AuctionStatus.OPEN
+                                        && auction.getStatus() != AuctionStatus.RUNNING) {
+                                    out.writeObject(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", null));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Đặt trạng thái FINISHED và lưu DB
+                                auction.setStatus(AuctionStatus.FINISHED);
+                                auctionDAO.update(auction);
+                                // Huỷ lịch đóng tự động
+                                AuctionManager.getInstance().closeAuction(auctionId);
+
+                                out.writeObject(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", auctionId));
+                                System.out.println("[Server] ADMIN_CLOSE_AUCTION OK: " + auctionId);
+
+                                // Broadcast để tất cả clients biết phiên đã đóng
+                                broadcast(new Message("AUCTION_CLOSED", auction), this);
+                                broadcast(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", auctionId), this);
+                            } catch (Exception e) {
+                                out.writeObject(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", null));
                                 e.printStackTrace();
                             }
                             out.flush();

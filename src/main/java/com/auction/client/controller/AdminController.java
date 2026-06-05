@@ -2,43 +2,21 @@ package com.auction.client.controller;
 
 import com.auction.client.SceneManager;
 import com.auction.client.network.ServerConnection;
-import com.auction.shared.model.Admin;
-import com.auction.shared.model.Auction;
-import com.auction.shared.model.AuctionStatus;
-import com.auction.shared.model.Bidder;
-import com.auction.shared.model.Message;
-import com.auction.shared.model.User;
-
-import javafx.application.Platform;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
+import com.auction.shared.model.*;
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
-import javafx.scene.paint.Color;
 
-import java.text.NumberFormat;
-import java.time.Duration;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Collectors;
 
-/**
- * AdminController — Màn hình Admin (Admin.fxml)
- *
- * Luồng hoạt động:
- *  1. initialize()        → kiểm tra instanceof Admin → setup bảng → loadDashboardData()
- *  2. loadDashboardData() → đăng ký callback lên ServerConnection → gửi GET_ALL_USERS + GET_ALL_AUCTIONS
- *  3. ServerConnection    → nhận GET_ALL_USERS_SUCCESS / GET_ALL_AUCTIONS_SUCCESS → gọi callback
- *  4. callback            → Platform.runLater → fill UI
- *  5. Approve/Reject/Ban  → gửi message → chờ SUCCESS callback → cập nhật UI
- */
 public class AdminController {
 
-    // ── Sidebar ───────────────────────────────────────────────
+    // ── Sidebar buttons ──────────────────────────────────────────────────────
     @FXML private Button btnDashboard;
     @FXML private Button btnUsers;
     @FXML private Button btnApprovals;
@@ -46,139 +24,164 @@ public class AdminController {
     @FXML private Button btnHistory;
     @FXML private Button btnLogout;
 
-    // ── Header ────────────────────────────────────────────────
+    // ── Search ───────────────────────────────────────────────────────────────
     @FXML private TextField txtSearchAdmin;
 
-    // ── Stat cards ────────────────────────────────────────────
+    // ── Stat cards ───────────────────────────────────────────────────────────
     @FXML private Label lblTotalUsers;
     @FXML private Label lblPending;
     @FXML private Label lblLive;
 
-    // ── Bảng User ─────────────────────────────────────────────
-    @FXML private TableView<User>           tableUsers;
-    @FXML private TableColumn<User, String> colUserName;
-    @FXML private TableColumn<User, String> colUsername;
-    @FXML private TableColumn<User, String> colRole;
-    @FXML private TableColumn<User, String> colBalance;
-    @FXML private TableColumn<User, String> colUserAction;
-    @FXML private Label                     lblUserCount;
+    // ── Users table ──────────────────────────────────────────────────────────
+    @FXML private Label                      lblUserCount;
+    @FXML private TableView<User>            tableUsers;
+    @FXML private TableColumn<User, String>  colUserName;
+    @FXML private TableColumn<User, String>  colUsername;
+    @FXML private TableColumn<User, String>  colRole;
+    @FXML private TableColumn<User, String>  colBalance;
+    @FXML private TableColumn<User, Void>    colUserAction;
 
-    // ── Bảng Chờ duyệt ────────────────────────────────────────
+    // ── Pending auctions table ────────────────────────────────────────────────
+    @FXML private Label                         lblPendingCount;
     @FXML private TableView<Auction>            tablePending;
     @FXML private TableColumn<Auction, String>  colPendingItem;
     @FXML private TableColumn<Auction, String>  colPendingSeller;
     @FXML private TableColumn<Auction, String>  colPendingPrice;
-    @FXML private TableColumn<Auction, String>  colPendingAction;
-    @FXML private Label                         lblPendingCount;
+    @FXML private TableColumn<Auction, Void>    colPendingAction;
 
-    // ── Bảng Live ─────────────────────────────────────────────
+    // ── Live auctions table ───────────────────────────────────────────────────
+    @FXML private Label                         lblLiveCount;
     @FXML private TableView<Auction>            tableLiveAuctions;
     @FXML private TableColumn<Auction, String>  colLiveItem;
     @FXML private TableColumn<Auction, String>  colLiveSeller;
     @FXML private TableColumn<Auction, String>  colLivePrice;
     @FXML private TableColumn<Auction, String>  colLiveBids;
     @FXML private TableColumn<Auction, String>  colLiveTime;
-    @FXML private TableColumn<Auction, String>  colLiveStatus;
-    @FXML private Label                         lblLiveCount;
+    @FXML private TableColumn<Auction, Void>    colLiveStatus;
 
-    // ── State ─────────────────────────────────────────────────
-    private final ObservableList<User>    userList    = FXCollections.observableArrayList();
-    private final ObservableList<Auction> pendingList = FXCollections.observableArrayList();
-    private final ObservableList<Auction> liveList    = FXCollections.observableArrayList();
+    // ── Local data ────────────────────────────────────────────────────────────
     private List<User>    allUsers    = List.of();
     private List<Auction> allAuctions = List.of();
 
-    private static final NumberFormat VND =
-            NumberFormat.getInstance(new Locale("vi", "VN"));
-    private static final DateTimeFormatter TIME_FMT =
-            DateTimeFormatter.ofPattern("HH:mm dd/MM");
+    private static final DateTimeFormatter DT_FMT =
+            DateTimeFormatter.ofPattern("dd/MM HH:mm");
 
-    // ─────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    //  INITIALIZE
+    // ─────────────────────────────────────────────────────────────────────────
     @FXML
     public void initialize() {
-        // Kiểm tra quyền Admin dùng instanceof thay vì so sánh string
-        User me = ServerConnection.getInstance().getCurrentUser();
-        if (!(me instanceof Admin)) {
-            SceneManager.switchScene("login.fxml");
-            return;
-        }
-
         setupUserTable();
         setupPendingTable();
         setupLiveTable();
-        setupSearch();
-        loadDashboardData();
+        registerCallbacks();
+        loadAll();
+
+        // Live search
+        txtSearchAdmin.textProperty().addListener((obs, o, n) -> applySearch(n));
     }
 
-    // ── Cài đặt cột ──────────────────────────────────────────
-
+    // ─────────────────────────────────────────────────────────────────────────
+    //  TABLE SETUP
+    // ─────────────────────────────────────────────────────────────────────────
     private void setupUserTable() {
+        // Tắt placeholder mặc định
+        tableUsers.setPlaceholder(new Label("Đang tải dữ liệu..."));
+
         colUserName.setCellValueFactory(d ->
-                new SimpleStringProperty(d.getValue().getEmail()));
+                new javafx.beans.property.SimpleStringProperty(d.getValue().getEmail()));
         colUsername.setCellValueFactory(d ->
-                new SimpleStringProperty(d.getValue().getUsername()));
+                new javafx.beans.property.SimpleStringProperty(d.getValue().getUsername()));
         colRole.setCellValueFactory(d ->
-                new SimpleStringProperty(d.getValue().getRole()));
+                new javafx.beans.property.SimpleStringProperty(d.getValue().getRole()));
+
+        // Số dư (chỉ Bidder có balance)
         colBalance.setCellValueFactory(d -> {
             User u = d.getValue();
-            if (u instanceof Bidder b)
-                return new SimpleStringProperty(VND.format((long) b.getBalance()) + "đ");
-            return new SimpleStringProperty("—");
+            String bal = (u instanceof Bidder b)
+                    ? String.format("%,.0f đ", b.getBalance()) : "—";
+            return new javafx.beans.property.SimpleStringProperty(bal);
         });
 
-        // Cột Khoá/Mở khoá — cập nhật ngay khi SERVER xác nhận BAN_USER_SUCCESS
+        // Action column: Ban / Unban button
         colUserAction.setCellFactory(col -> new TableCell<>() {
             private final Button btn = new Button();
             {
+                btn.setStyle(
+                    "-fx-background-radius: 4; -fx-border-radius: 4; " +
+                    "-fx-font-size: 11px; -fx-font-weight: bold; " +
+                    "-fx-padding: 4 10; -fx-cursor: hand;");
                 btn.setOnAction(e -> {
                     User u = getTableView().getItems().get(getIndex());
                     handleBanUser(u);
                 });
             }
-            @Override protected void updateItem(String item, boolean empty) {
+            @Override
+            protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
-                    setGraphic(null);
-                    return;
-                }
+                if (empty) { setGraphic(null); return; }
                 User u = getTableView().getItems().get(getIndex());
-                refreshBtn(u);
-                setGraphic(btn);
-            }
-            private void refreshBtn(User u) {
+                if (u instanceof Admin) { setGraphic(null); return; }
                 if (u.isActive()) {
-                    btn.setText("Khoá");
-                    btn.setStyle("-fx-background-color: rgba(255,100,100,0.25); -fx-text-fill: #ff6b6b;" +
-                            " -fx-background-radius: 4; -fx-font-size: 11px; -fx-cursor: hand;");
+                    btn.setText("🔒 Khóa");
+                    btn.setStyle(btn.getStyle() +
+                        "-fx-background-color: rgba(220,38,38,0.75); -fx-text-fill: white;" +
+                        "-fx-border-color: rgba(255,255,255,0.2); -fx-border-width:1;");
                 } else {
-                    btn.setText("Mở khoá");
-                    btn.setStyle("-fx-background-color: rgba(74,222,128,0.25); -fx-text-fill: #4ade80;" +
-                            " -fx-background-radius: 4; -fx-font-size: 11px; -fx-cursor: hand;");
+                    btn.setText("🔓 Mở khóa");
+                    btn.setStyle(btn.getStyle() +
+                        "-fx-background-color: rgba(34,197,94,0.75); -fx-text-fill: white;" +
+                        "-fx-border-color: rgba(255,255,255,0.2); -fx-border-width:1;");
                 }
+                setGraphic(btn);
+                setAlignment(Pos.CENTER);
             }
         });
 
-        tableUsers.setItems(userList);
-        applyTableStyle(tableUsers);
+        // Row style: banned users có màu đỏ nhạt
+        tableUsers.setRowFactory(tv -> new TableRow<>() {
+            @Override
+            protected void updateItem(User u, boolean empty) {
+                super.updateItem(u, empty);
+                if (empty || u == null) { setStyle(""); return; }
+                setStyle(u.isActive() ? "" :
+                    "-fx-background-color: rgba(220,38,38,0.15);");
+            }
+        });
+
+        styleTable(tableUsers);
     }
 
     private void setupPendingTable() {
-        colPendingItem.setCellValueFactory(d -> new SimpleStringProperty(
-                d.getValue().getItem() != null ? d.getValue().getItem().getName() : "?"));
-        colPendingSeller.setCellValueFactory(d -> new SimpleStringProperty(
-                d.getValue().getSeller() != null ? d.getValue().getSeller().getUsername() : "?"));
-        colPendingPrice.setCellValueFactory(d -> new SimpleStringProperty(
-                VND.format((long) d.getValue().getCurrentPrice()) + "đ"));
+        tablePending.setPlaceholder(new Label("Không có phiên chờ duyệt"));
 
+        colPendingItem.setCellValueFactory(d ->
+                new javafx.beans.property.SimpleStringProperty(
+                        d.getValue().getItem().getName()));
+        colPendingSeller.setCellValueFactory(d ->
+                new javafx.beans.property.SimpleStringProperty(
+                        d.getValue().getSeller() != null
+                                ? d.getValue().getSeller().getUsername() : "—"));
+        colPendingPrice.setCellValueFactory(d ->
+                new javafx.beans.property.SimpleStringProperty(
+                        String.format("%,.0f đ", d.getValue().getItem().getBasePrice())));
+
+        // Action: Duyệt + Từ chối
         colPendingAction.setCellFactory(col -> new TableCell<>() {
-            private final Button btnApprove = new Button("✓ Duyệt");
-            private final Button btnReject  = new Button("✗ Từ chối");
-            private final HBox   box        = new HBox(4, btnApprove, btnReject);
+            private final Button btnApprove = new Button("✅ Duyệt");
+            private final Button btnReject  = new Button("❌ Từ chối");
+            private final HBox   box        = new HBox(6, btnApprove, btnReject);
             {
-                btnApprove.setStyle("-fx-background-color: rgba(74,222,128,0.25); -fx-text-fill: #4ade80;" +
-                        " -fx-background-radius: 4; -fx-font-size: 10px; -fx-cursor: hand;");
-                btnReject.setStyle("-fx-background-color: rgba(255,100,100,0.25); -fx-text-fill: #ff6b6b;" +
-                        " -fx-background-radius: 4; -fx-font-size: 10px; -fx-cursor: hand;");
+                box.setAlignment(Pos.CENTER);
+                String base = "-fx-background-radius:4; -fx-border-radius:4; " +
+                              "-fx-font-size:11px; -fx-font-weight:bold; " +
+                              "-fx-padding:4 8; -fx-cursor:hand; " +
+                              "-fx-border-color:rgba(255,255,255,0.2); -fx-border-width:1;";
+                btnApprove.setStyle(base +
+                    "-fx-background-color:rgba(34,197,94,0.75); -fx-text-fill:white;");
+                btnReject.setStyle(base +
+                    "-fx-background-color:rgba(220,38,38,0.75); -fx-text-fill:white;");
+
                 btnApprove.setOnAction(e -> {
                     Auction a = getTableView().getItems().get(getIndex());
                     handleApprove(a);
@@ -188,299 +191,329 @@ public class AdminController {
                     handleReject(a);
                 });
             }
-            @Override protected void updateItem(String item, boolean empty) {
+            @Override
+            protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
                 setGraphic(empty ? null : box);
             }
         });
 
-        tablePending.setItems(pendingList);
-        applyTableStyle(tablePending);
+        styleTable(tablePending);
     }
 
     private void setupLiveTable() {
-        colLiveItem.setCellValueFactory(d -> new SimpleStringProperty(
-                d.getValue().getItem() != null ? d.getValue().getItem().getName() : "?"));
-        colLiveSeller.setCellValueFactory(d -> new SimpleStringProperty(
-                d.getValue().getSeller() != null ? d.getValue().getSeller().getUsername() : "?"));
-        colLivePrice.setCellValueFactory(d -> new SimpleStringProperty(
-                VND.format((long) d.getValue().getCurrentPrice()) + "đ"));
-        colLiveBids.setCellValueFactory(d -> new SimpleStringProperty(
-                String.valueOf(d.getValue().getBids() != null ? d.getValue().getBids().size() : 0)));
+        tableLiveAuctions.setPlaceholder(new Label("Không có phiên đang diễn ra"));
+
+        colLiveItem.setCellValueFactory(d ->
+                new javafx.beans.property.SimpleStringProperty(
+                        d.getValue().getItem().getName()));
+        colLiveSeller.setCellValueFactory(d ->
+                new javafx.beans.property.SimpleStringProperty(
+                        d.getValue().getSeller() != null
+                                ? d.getValue().getSeller().getUsername() : "—"));
+        colLivePrice.setCellValueFactory(d ->
+                new javafx.beans.property.SimpleStringProperty(
+                        String.format("%,.0f đ", d.getValue().getCurrentPrice())));
+        colLiveBids.setCellValueFactory(d ->
+                new javafx.beans.property.SimpleStringProperty(
+                        String.valueOf(d.getValue().getBidCount())));
         colLiveTime.setCellValueFactory(d -> {
             LocalDateTime end = d.getValue().getEndTime();
-            if (end == null) return new SimpleStringProperty("—");
-            long mins = Duration.between(LocalDateTime.now(), end).toMinutes();
-            return new SimpleStringProperty(mins < 0 ? "Đã kết thúc" : mins + " phút");
+            String txt = (end != null) ? end.format(DT_FMT) : "—";
+            return new javafx.beans.property.SimpleStringProperty(txt);
         });
-        colLiveStatus.setCellValueFactory(d -> new SimpleStringProperty(
-                d.getValue().getStatus() != null ? d.getValue().getStatus().name() : "?"));
 
-        tableLiveAuctions.setItems(liveList);
-        applyTableStyle(tableLiveAuctions);
+        // Action: nút Đóng phiên
+        colLiveStatus.setCellFactory(col -> new TableCell<>() {
+            private final Button btnClose = new Button("⏹ Đóng phiên");
+            {
+                btnClose.setStyle(
+                    "-fx-background-color:rgba(245,158,11,0.80); -fx-text-fill:white; " +
+                    "-fx-font-size:11px; -fx-font-weight:bold; -fx-padding:4 8; " +
+                    "-fx-background-radius:4; -fx-border-radius:4; " +
+                    "-fx-border-color:rgba(255,255,255,0.2); -fx-border-width:1; -fx-cursor:hand;");
+                btnClose.setOnAction(e -> {
+                    Auction a = getTableView().getItems().get(getIndex());
+                    handleCloseAuction(a);
+                });
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : btnClose);
+                if (!empty) setAlignment(Pos.CENTER);
+            }
+        });
+
+        styleTable(tableLiveAuctions);
     }
 
-    private void setupSearch() {
-        txtSearchAdmin.textProperty().addListener(
-                (obs, old, val) -> applySearch(val.trim().toLowerCase()));
+    /** Apply consistent dark-glass styling to a TableView */
+    private <T> void styleTable(TableView<T> tv) {
+        tv.setStyle(
+            "-fx-background-color: transparent; " +
+            "-fx-border-color: rgba(255,255,255,0.10); " +
+            "-fx-border-radius: 6; -fx-control-inner-background: rgba(0,0,0,0.25);");
+        tv.getColumns().forEach(c ->
+            c.setStyle("-fx-text-fill: #cccccc; -fx-font-size: 12px;"));
     }
 
-    // ── Load dữ liệu từ server ────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    //  SERVER CALLBACKS
+    // ─────────────────────────────────────────────────────────────────────────
+    private void registerCallbacks() {
+        ServerConnection sc = ServerConnection.getInstance();
 
-    private void loadDashboardData() {
-        ServerConnection conn = ServerConnection.getInstance();
-
-        // Đăng ký callback nhận danh sách user
-        conn.setAdminUserCallback(users -> Platform.runLater(() -> {
+        // ServerConnection đã wrap Platform.runLater rồi — không cần bọc thêm
+        sc.setAdminUserCallback(users -> {
             allUsers = users;
-            fillUserTable(users);
-            fillStats();
-        }));
+            refreshUserTable(users);
+            lblTotalUsers.setText(String.valueOf(
+                    users.stream().filter(u -> !(u instanceof Admin)).count()));
+        });
 
-        // Đăng ký callback nhận danh sách auction
-        conn.setAdminAuctionCallback(auctions -> Platform.runLater(() -> {
+        sc.setAdminAuctionCallback(auctions -> {
             allAuctions = auctions;
-            fillPendingTable(auctions);
-            fillLiveTable(auctions);
-            fillStats();
-        }));
+            refreshAuctionTables(auctions);
+        });
 
-        // Đăng ký callback khi approve thành công
-        conn.setAdminApproveCallback(auctionId -> Platform.runLater(() -> {
-            pendingList.removeIf(a -> a.getId().equals(auctionId));
-            // Tìm auction trong allAuctions để thêm vào liveList
-            allAuctions.stream()
-                    .filter(a -> a.getId().equals(auctionId))
-                    .findFirst()
-                    .ifPresent(a -> {
-                        a.setStatus(AuctionStatus.OPEN);
-                        liveList.add(a);
-                    });
-            fillStats();
-        }));
+        sc.setAdminApproveCallback(auctionId -> {
+            if (auctionId == null) return;
+            allAuctions = allAuctions.stream()
+                    .map(a -> { if (a.getId().equals(auctionId)) a.setStatus(AuctionStatus.OPEN); return a; })
+                    .collect(Collectors.toList());
+            refreshAuctionTables(allAuctions);
+            showInfo("Đã duyệt phiên", "Phiên đấu giá đã được mở.");
+        });
 
-        // Đăng ký callback khi reject thành công
-        conn.setAdminRejectCallback(auctionId -> Platform.runLater(() -> {
-            pendingList.removeIf(a -> a.getId().equals(auctionId));
-            fillStats();
-        }));
+        sc.setAdminRejectCallback(auctionId -> {
+            if (auctionId == null) return;
+            allAuctions = allAuctions.stream()
+                    .filter(a -> !a.getId().equals(auctionId))
+                    .collect(Collectors.toList());
+            refreshAuctionTables(allAuctions);
+            showInfo("Đã từ chối", "Phiên đấu giá đã bị từ chối và hủy bỏ.");
+        });
 
-        // Đăng ký callback khi ban/unban thành công
-        conn.setAdminBanCallback(userId -> Platform.runLater(() -> {
-            userList.stream()
-                    .filter(u -> u.getId().equals(userId))
-                    .findFirst()
-                    .ifPresent(u -> u.setActive(!u.isActive()));
-            tableUsers.refresh();
-        }));
+        sc.setAdminBanCallback(userId -> {
+            if (userId == null) return;
+            allUsers = allUsers.stream()
+                    .map(u -> {
+                        if (u.getId().equals(userId)) u.setActive(!u.isActive());
+                        return u;
+                    })
+                    .collect(Collectors.toList());
+            refreshUserTable(allUsers);
+            lblTotalUsers.setText(String.valueOf(
+                    allUsers.stream().filter(u -> !(u instanceof Admin)).count()));
+        });
 
+        sc.setAdminCloseAuctionCallback(auctionId -> {
+            if (auctionId == null) return;
+            allAuctions = allAuctions.stream()
+                    .map(a -> {
+                        if (a.getId().equals(auctionId)) a.setStatus(AuctionStatus.FINISHED);
+                        return a;
+                    })
+                    .collect(Collectors.toList());
+            refreshAuctionTables(allAuctions);
+            showInfo("Đã đóng phiên", "Phiên đấu giá đã được đóng bởi Admin.");
+        });
+
+        // Thông báo real-time khi seller tạo phiên mới chờ duyệt
+        sc.setAdminNewPendingCallback(auction -> {
+            if (auction == null) return;
+            // Thêm vào list nội bộ nếu chưa có
+            boolean exists = allAuctions.stream().anyMatch(a -> a.getId().equals(auction.getId()));
+            if (!exists) {
+                java.util.List<Auction> updated = new java.util.ArrayList<>(allAuctions);
+                updated.add(0, auction);
+                allAuctions = updated;
+                refreshAuctionTables(allAuctions);
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  LOAD / REFRESH
+    // ─────────────────────────────────────────────────────────────────────────
+    private void loadAll() {
         try {
-            conn.sendMessage(new Message("GET_ALL_USERS",    null));
-            conn.sendMessage(new Message("GET_ALL_AUCTIONS", null));
-        } catch (Exception e) {
-            showAlert("Lỗi kết nối", "Không thể tải dữ liệu từ server: " + e.getMessage());
+            ServerConnection sc = ServerConnection.getInstance();
+            sc.sendMessage(new Message("GET_ALL_USERS",    null));
+            sc.sendMessage(new Message("GET_ALL_AUCTIONS", null));
+        } catch (IOException e) {
+            showError("Lỗi kết nối", "Không thể tải dữ liệu từ server: " + e.getMessage());
         }
     }
 
-    // ── Điền dữ liệu lên UI ───────────────────────────────────
-
-    private void fillStats() {
-        lblTotalUsers.setText(String.valueOf(allUsers.size()));
-        lblUserCount.setText("(" + allUsers.size() + ")");
-
-        long pendingCount = allAuctions.stream()
-                .filter(a -> a.getStatus() == AuctionStatus.PENDING_APPROVAL).count();
-        // [FIX 3] Bổ sung RUNNING: phiên đang có người đặt thầu có status RUNNING, không chỉ OPEN
-        long liveCount = allAuctions.stream()
-                .filter(a -> a.getStatus() == AuctionStatus.OPEN
-                        || a.getStatus() == AuctionStatus.RUNNING)
-                .count();
-
-        lblPending.setText(String.valueOf(pendingCount));
-        lblPendingCount.setText("(" + pendingCount + ")");
-        lblLive.setText(String.valueOf(liveCount));
-        lblLiveCount.setText("(" + liveCount + " live)");
+    private void refreshUserTable(List<User> users) {
+        tableUsers.getItems().setAll(users);
+        lblUserCount.setText("(" + users.size() + ")");
     }
 
-    private void fillUserTable(List<User> users) {
-        userList.setAll(users);
-    }
-
-    private void fillPendingTable(List<Auction> auctions) {
-        pendingList.setAll(auctions.stream()
+    private void refreshAuctionTables(List<Auction> auctions) {
+        List<Auction> pending = auctions.stream()
                 .filter(a -> a.getStatus() == AuctionStatus.PENDING_APPROVAL)
-                .collect(Collectors.toList()));
-    }
-
-    private void fillLiveTable(List<Auction> auctions) {
-        // [FIX 3] Bổ sung RUNNING: phiên đang có người đặt thầu có status RUNNING
-        liveList.setAll(auctions.stream()
+                .collect(Collectors.toList());
+        List<Auction> live = auctions.stream()
                 .filter(a -> a.getStatus() == AuctionStatus.OPEN
-                        || a.getStatus() == AuctionStatus.RUNNING)
-                .collect(Collectors.toList()));
+                          || a.getStatus() == AuctionStatus.RUNNING)
+                .collect(Collectors.toList());
+
+        tablePending.getItems().setAll(pending);
+        tableLiveAuctions.getItems().setAll(live);
+
+        lblPendingCount.setText("(" + pending.size() + ")");
+        lblLiveCount.setText("(" + live.size() + " live)");
+        lblPending.setText(String.valueOf(pending.size()));
+        lblLive.setText(String.valueOf(live.size()));
     }
 
-    // ── Tìm kiếm ─────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    //  ACTIONS
+    // ─────────────────────────────────────────────────────────────────────────
+    private void handleBanUser(User u) {
+        String action = u.isActive() ? "KHÓA" : "MỞ KHÓA";
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "Bạn có chắc muốn " + action + " tài khoản \"" + u.getUsername() + "\"?",
+                ButtonType.YES, ButtonType.NO);
+        confirm.setHeaderText(action + " TÀI KHOẢN");
+        confirm.showAndWait().ifPresent(bt -> {
+            if (bt == ButtonType.YES) {
+                try {
+                    ServerConnection.getInstance().sendMessage(
+                            new Message("BAN_USER", u.getId()));
+                } catch (IOException e) {
+                    showError("Lỗi", e.getMessage());
+                }
+            }
+        });
+    }
 
-    private void applySearch(String keyword) {
-        if (keyword.isEmpty()) {
-            fillUserTable(allUsers);
-            fillPendingTable(allAuctions);
+    private void handleApprove(Auction a) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "Duyệt phiên đấu giá \"" + a.getItem().getName() + "\"?",
+                ButtonType.YES, ButtonType.NO);
+        confirm.setHeaderText("XÁC NHẬN DUYỆT PHIÊN");
+        confirm.showAndWait().ifPresent(bt -> {
+            if (bt == ButtonType.YES) {
+                try {
+                    ServerConnection.getInstance().sendMessage(
+                            new Message("APPROVE_AUCTION", a.getId()));
+                } catch (IOException e) {
+                    showError("Lỗi", e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void handleReject(Auction a) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "Từ chối phiên đấu giá \"" + a.getItem().getName() + "\"? Phiên sẽ bị hủy.",
+                ButtonType.YES, ButtonType.NO);
+        confirm.setHeaderText("XÁC NHẬN TỪ CHỐI");
+        confirm.showAndWait().ifPresent(bt -> {
+            if (bt == ButtonType.YES) {
+                try {
+                    ServerConnection.getInstance().sendMessage(
+                            new Message("REJECT_AUCTION", a.getId()));
+                } catch (IOException e) {
+                    showError("Lỗi", e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void handleCloseAuction(Auction a) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "Đóng ngay phiên \"" + a.getItem().getName() + "\"?\n" +
+                "Người có giá cao nhất hiện tại sẽ được chốt thắng.",
+                ButtonType.YES, ButtonType.NO);
+        confirm.setHeaderText("⏹ ĐÓNG PHIÊN ĐẤU GIÁ");
+        confirm.showAndWait().ifPresent(bt -> {
+            if (bt == ButtonType.YES) {
+                try {
+                    ServerConnection.getInstance().sendMessage(
+                            new Message("ADMIN_CLOSE_AUCTION", a.getId()));
+                } catch (IOException e) {
+                    showError("Lỗi", e.getMessage());
+                }
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  SEARCH
+    // ─────────────────────────────────────────────────────────────────────────
+    private void applySearch(String query) {
+        if (query == null || query.isBlank()) {
+            refreshUserTable(allUsers);
+            refreshAuctionTables(allAuctions);
             return;
         }
-        fillUserTable(allUsers.stream()
-                .filter(u -> u.getUsername().toLowerCase().contains(keyword)
-                        || u.getEmail().toLowerCase().contains(keyword))
-                .collect(Collectors.toList()));
-        pendingList.setAll(allAuctions.stream()
-                .filter(a -> a.getStatus() == AuctionStatus.PENDING_APPROVAL)
-                .filter(a -> a.getItem() != null
-                        && a.getItem().getName().toLowerCase().contains(keyword))
-                .collect(Collectors.toList()));
-    }
-
-    // ── Thao tác Admin ────────────────────────────────────────
-
-    /**
-     * Gửi APPROVE_AUCTION lên server.
-     * UI chỉ cập nhật sau khi nhận APPROVE_AUCTION_SUCCESS qua callback.
-     */
-    private void handleApprove(Auction auction) {
-        try {
-            ServerConnection.getInstance().sendMessage(
-                    new Message("APPROVE_AUCTION", auction.getId()));
-        } catch (Exception e) {
-            showAlert("Lỗi", "Không thể phê duyệt: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Gửi REJECT_AUCTION lên server.
-     * UI chỉ cập nhật sau khi nhận REJECT_AUCTION_SUCCESS qua callback.
-     */
-    private void handleReject(Auction auction) {
-        try {
-            ServerConnection.getInstance().sendMessage(
-                    new Message("REJECT_AUCTION", auction.getId()));
-        } catch (Exception e) {
-            showAlert("Lỗi", "Không thể từ chối: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Gửi BAN_USER lên server.
-     * UI toggle active chỉ sau khi nhận BAN_USER_SUCCESS qua callback.
-     */
-    private void handleBanUser(User user) {
-        try {
-            ServerConnection.getInstance().sendMessage(
-                    new Message("BAN_USER", user.getId()));
-        } catch (Exception e) {
-            showAlert("Lỗi", "Không thể thay đổi trạng thái user: " + e.getMessage());
-        }
-    }
-
-    // ── Sidebar navigation ────────────────────────────────────
-
-    @FXML private void handleShowDashboard() {
-        setActiveButton(btnDashboard);
-        loadDashboardData();
-    }
-
-    @FXML private void handleShowUsers() {
-        setActiveButton(btnUsers);
-        tableUsers.scrollTo(0);
-    }
-
-    @FXML private void handleShowApprovals() {
-        setActiveButton(btnApprovals);
-        tablePending.scrollTo(0);
-    }
-
-    @FXML private void handleShowLive() {
-        setActiveButton(btnLive);
-        // [FIX 2] Restore lại ObservableList gốc để tableLiveAuctions hiển thị đúng live data
-        // sau khi người dùng có thể đã xem History (History thay thế items bằng list tạm)
-        tableLiveAuctions.setItems(liveList);
-        tableLiveAuctions.scrollTo(0);
-    }
-
-    @FXML private void handleShowHistory() {
-        setActiveButton(btnHistory);
-        // [FIX 2] Dùng ObservableList riêng thay vì ghi đè liveList để tránh mất dữ liệu live.
-        // Bổ sung AuctionStatus.PAID vào điều kiện lọc (trước chỉ có FINISHED và CANCELLED).
-        List<Auction> history = allAuctions.stream()
-                .filter(a -> a.getStatus() == AuctionStatus.FINISHED
-                        || a.getStatus() == AuctionStatus.CANCELLED
-                        || a.getStatus() == AuctionStatus.PAID)
+        String q = query.toLowerCase();
+        List<User> filteredUsers = allUsers.stream()
+                .filter(u -> u.getUsername().toLowerCase().contains(q)
+                          || u.getEmail().toLowerCase().contains(q))
                 .collect(Collectors.toList());
-        tableLiveAuctions.setItems(FXCollections.observableArrayList(history));
-        tableLiveAuctions.scrollTo(0);
+        tableUsers.getItems().setAll(filteredUsers);
+        lblUserCount.setText("(" + filteredUsers.size() + ")");
+
+        List<Auction> filteredPending = allAuctions.stream()
+                .filter(a -> a.getStatus() == AuctionStatus.PENDING_APPROVAL)
+                .filter(a -> a.getItem().getName().toLowerCase().contains(q)
+                          || (a.getSeller() != null && a.getSeller().getUsername().toLowerCase().contains(q)))
+                .collect(Collectors.toList());
+        tablePending.getItems().setAll(filteredPending);
+
+        List<Auction> filteredLive = allAuctions.stream()
+                .filter(a -> a.getStatus() == AuctionStatus.OPEN || a.getStatus() == AuctionStatus.RUNNING)
+                .filter(a -> a.getItem().getName().toLowerCase().contains(q)
+                          || (a.getSeller() != null && a.getSeller().getUsername().toLowerCase().contains(q)))
+                .collect(Collectors.toList());
+        tableLiveAuctions.getItems().setAll(filteredLive);
     }
 
-    @FXML private void handleRefreshUsers() {
-        try {
-            ServerConnection.getInstance().sendMessage(new Message("GET_ALL_USERS", null));
-        } catch (Exception e) {
-            showAlert("Lỗi", e.getMessage());
-        }
-    }
+    // ─────────────────────────────────────────────────────────────────────────
+    //  FXML HANDLERS — Sidebar
+    // ─────────────────────────────────────────────────────────────────────────
+    @FXML private void handleShowDashboard()  { highlightNav(btnDashboard); loadAll(); }
+    @FXML private void handleShowUsers()      { highlightNav(btnUsers);    tableUsers.scrollTo(0); }
+    @FXML private void handleShowApprovals()  { highlightNav(btnApprovals); tablePending.scrollTo(0); }
+    @FXML private void handleShowLive()       { highlightNav(btnLive);     tableLiveAuctions.scrollTo(0); }
+    @FXML private void handleShowHistory()    { highlightNav(btnHistory);  loadAll(); }
 
-    @FXML private void handleRefreshPending() {
-        try {
-            ServerConnection.getInstance().sendMessage(new Message("GET_ALL_AUCTIONS", null));
-        } catch (Exception e) {
-            showAlert("Lỗi", e.getMessage());
-        }
-    }
+    @FXML private void handleRefreshUsers()   { try { ServerConnection.getInstance().sendMessage(new Message("GET_ALL_USERS",    null)); } catch (IOException ignored) {} }
+    @FXML private void handleRefreshPending() { try { ServerConnection.getInstance().sendMessage(new Message("GET_ALL_AUCTIONS", null)); } catch (IOException ignored) {} }
+    @FXML private void handleRefreshLive()    { try { ServerConnection.getInstance().sendMessage(new Message("GET_ALL_AUCTIONS", null)); } catch (IOException ignored) {} }
 
-    @FXML private void handleRefreshLive() {
-        try {
-            ServerConnection.getInstance().sendMessage(new Message("GET_ALL_AUCTIONS", null));
-        } catch (Exception e) {
-            showAlert("Lỗi", e.getMessage());
-        }
-    }
-
-    @FXML private void handleLogout() {
-        try {
-            ServerConnection.getInstance().sendMessage(new Message("LOGOUT", null));
-        } catch (Exception ignored) {}
+    @FXML
+    private void handleLogout() {
+        try { ServerConnection.getInstance().close(); } catch (IOException ignored) {}
         SceneManager.switchScene("login.fxml");
     }
 
-    // ── Helpers ───────────────────────────────────────────────
-
-    private static final String STYLE_ACTIVE =
-            "-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white;" +
-                    " -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT;" +
-                    " -fx-padding: 10 14; -fx-background-radius: 6; -fx-cursor: hand;";
-    private static final String STYLE_INACTIVE =
-            "-fx-background-color: transparent; -fx-text-fill: white;" +
-                    " -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT;" +
-                    " -fx-padding: 10 14; -fx-cursor: hand;";
-
-    private void setActiveButton(Button active) {
+    // ─────────────────────────────────────────────────────────────────────────
+    //  HELPERS
+    // ─────────────────────────────────────────────────────────────────────────
+    private void highlightNav(Button active) {
+        String activeStyle  = "-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-background-radius: 6; -fx-cursor: hand;";
+        String normalStyle  = "-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;";
         for (Button b : new Button[]{btnDashboard, btnUsers, btnApprovals, btnLive, btnHistory}) {
-            b.setStyle(b == active ? STYLE_ACTIVE : STYLE_INACTIVE);
+            b.setStyle(b == active ? activeStyle : normalStyle);
         }
     }
 
-    private <T> void applyTableStyle(TableView<T> table) {
-        table.setStyle("-fx-background-color: transparent;" +
-                " -fx-border-color: rgba(255,255,255,0.10); -fx-border-radius: 6;");
-        Label placeholder = new Label("Không có dữ liệu");
-        placeholder.setTextFill(Color.web("rgba(255,255,255,0.40)"));
-        table.setPlaceholder(placeholder);
+    private void showInfo(String header, String content) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION, content);
+        a.setHeaderText(header);
+        a.showAndWait();
     }
 
-    private void showAlert(String title, String msg) {
-        Platform.runLater(() -> {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle(title);
-            alert.setHeaderText(null);
-            alert.setContentText(msg);
-            alert.showAndWait();
-        });
+    private void showError(String header, String content) {
+        Alert a = new Alert(Alert.AlertType.ERROR, content);
+        a.setHeaderText(header);
+        a.showAndWait();
     }
 }

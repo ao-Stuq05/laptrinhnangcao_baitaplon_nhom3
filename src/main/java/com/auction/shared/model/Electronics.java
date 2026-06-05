@@ -19,6 +19,6 @@ public class Electronics extends Item implements Serializable {
     }
     @Override
     public String getCategory() {
-        return "Electronics";
+        return "ELECTRONICS";
     }
 }

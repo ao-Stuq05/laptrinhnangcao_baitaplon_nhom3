@@ -36,6 +36,8 @@ public class ServerConnection {
     private Consumer<String>               adminApproveCallback;
     private Consumer<String>               adminRejectCallback;
     private Consumer<String>               adminBanCallback;
+    private Consumer<String>               adminCloseAuctionCallback;
+    private Consumer<Auction>              adminNewPendingCallback;
 
     private ServerConnection() {}
     public static ServerConnection getInstance() {
@@ -58,7 +60,9 @@ public class ServerConnection {
     public void setAdminAuctionCallback  (Consumer<List<Auction>> cb)         { adminAuctionCallback   = cb; }
     public void setAdminApproveCallback  (Consumer<String> cb)                { adminApproveCallback   = cb; }
     public void setAdminRejectCallback   (Consumer<String> cb)                { adminRejectCallback    = cb; }
-    public void setAdminBanCallback      (Consumer<String> cb)                { adminBanCallback       = cb; }
+    public void setAdminBanCallback             (Consumer<String> cb) { adminBanCallback            = cb; }
+    public void setAdminCloseAuctionCallback    (Consumer<String> cb) { adminCloseAuctionCallback   = cb; }
+    public void setAdminNewPendingCallback      (Consumer<Auction> cb) { adminNewPendingCallback     = cb; }
 
     public void connect(String host, int port) throws IOException {
         if (socket == null || socket.isClosed()) {
@@ -309,6 +313,18 @@ public class ServerConnection {
                 String userId = (String) msg.getPayload();
                 if (userId != null && adminBanCallback != null)
                     Platform.runLater(() -> adminBanCallback.accept(userId));
+            }
+
+            case "NEW_PENDING_AUCTION" -> {
+                Auction a = (Auction) msg.getPayload();
+                if (a != null && adminNewPendingCallback != null)
+                    Platform.runLater(() -> adminNewPendingCallback.accept(a));
+            }
+
+            case "ADMIN_CLOSE_AUCTION_SUCCESS" -> {
+                String auctionId = (String) msg.getPayload();
+                if (auctionId != null && adminCloseAuctionCallback != null)
+                    Platform.runLater(() -> adminCloseAuctionCallback.accept(auctionId));
             }
 
             default -> System.out.println("[Client] Không xử lý: " + msg.getType());

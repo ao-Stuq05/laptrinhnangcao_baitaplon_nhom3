@@ -9,12 +9,15 @@ import java.util.Optional;
 
 public class ItemDAO {
 
-    private final Connection conn;
+    // conn removed: each method gets a fresh connection via getConn()
     private final UserDAO userDAO;
 
     public ItemDAO() {
-        this.conn = DatabaseManager.getInstance().getConnection();
         this.userDAO = new UserDAO();
+    }
+
+    private Connection getConn() {
+        return DatabaseManager.getInstance().getConnection();
     }
 
     // ── CREATE ────────────────────────────────────────────────
@@ -24,7 +27,7 @@ public class ItemDAO {
             INSERT INTO items (id, name, description, base_price, category, seller_id, image_data, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, item.getId());
             ps.setString(2, item.getName());
             ps.setString(3, item.getDescription());
@@ -43,7 +46,7 @@ public class ItemDAO {
 
     public Optional<Item> findById(String id) throws SQLException {
         String sql = "SELECT * FROM items WHERE id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) return Optional.of(mapRowToItem(rs));
@@ -54,7 +57,7 @@ public class ItemDAO {
     public List<Item> findBySeller(String sellerId) throws SQLException {
         String sql = "SELECT * FROM items WHERE seller_id = ? ORDER BY created_at DESC";
         List<Item> result = new ArrayList<>();
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, sellerId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) result.add(mapRowToItem(rs));
@@ -65,7 +68,7 @@ public class ItemDAO {
     public List<Item> findAll() throws SQLException {
         String sql = "SELECT * FROM items ORDER BY created_at DESC";
         List<Item> result = new ArrayList<>();
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) result.add(mapRowToItem(rs));
         }
@@ -81,7 +84,7 @@ public class ItemDAO {
                 image_data = ?, updated_at = ?
             WHERE id = ?
         """;
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, item.getName());
             ps.setString(2, item.getDescription());
             ps.setDouble(3, item.getBasePrice());
@@ -98,7 +101,7 @@ public class ItemDAO {
 
     public void delete(String id) throws SQLException {
         String sql = "DELETE FROM items WHERE id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, id);
             ps.executeUpdate();
             System.out.println("[ItemDAO] Đã xóa item: " + id);
@@ -119,11 +122,18 @@ public class ItemDAO {
         Seller seller = (Seller) userDAO.findById(sellerId)
                 .orElseThrow(() -> new SQLException("Không tìm thấy seller: " + sellerId));
 
-        Item item = switch (category) {
-            case "ELECTRONICS" -> new Electronics(id, name, description, basePrice, seller, 12);
-            case "ART"         -> new Art(id, name, description, basePrice, seller, "Unknown", 2024);
-            case "VEHICLE"     -> new Vehicle(id, name, description, basePrice, seller, "Unknown", 0);
-            default -> throw new SQLException("Category không hợp lệ: " + category);
+        // [FIX] Chuẩn hoá category: xử lý cả uppercase, tiếng Việt và các alias khác
+        String catNorm = category == null ? "" : category.trim().toUpperCase();
+        Item item = switch (catNorm) {
+            case "ELECTRONICS",
+                 "ĐIỆN TỶ", "ĐIỆN TỰ",
+                 "ĐồNG HỒ & TRANG SỨC", "CỔ VỎT", "KHÁC" ->
+                    new Electronics(id, name, description, basePrice, seller, 12);
+            case "ART", "NGHỆ THUẬT", "NGHỆ THUẬT & CỔ VỎT" ->
+                    new Art(id, name, description, basePrice, seller, "Unknown", 2024);
+            case "VEHICLE", "XE CỘ", "XE CỞI" ->
+                    new Vehicle(id, name, description, basePrice, seller, "Unknown", 0);
+            default -> new Electronics(id, name, description, basePrice, seller, 0); // fallback an toàn
         };
         item.setImageBase64(imageBase64);
         return item;

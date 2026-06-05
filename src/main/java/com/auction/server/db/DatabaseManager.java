@@ -8,23 +8,26 @@ import java.sql.Statement;
 
 public class DatabaseManager {
 
-    private static final String DB_HOST = "jdbc:mysql://localhost:3306/";
-    private static final String DB_NAME = "auction_db";
+    private static final String DB_HOST    = "jdbc:mysql://localhost:3306/";
+    private static final String DB_NAME    = "auction_db";
     private static final String DB_OPTIONS = "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
 
     private static final String USER = "root";
     private static final String PASS = "";
 
     private static DatabaseManager instance;
-    private Connection connection;
+    private String dbUrl;
 
     private DatabaseManager() {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
-            connection = DriverManager.getConnection(DB_HOST + DB_OPTIONS, USER, PASS);
-            initDatabase();
+            // Bước 1: kết nối không có DB để tạo database trước
+            Connection initConn = DriverManager.getConnection(DB_HOST + DB_OPTIONS, USER, PASS);
+            initDatabase(initConn);
+            initConn.close();
+            // Bước 2: URL chính thức sau khi DB đã tồn tại
+            this.dbUrl = DB_HOST + DB_NAME + DB_OPTIONS;
             System.out.println("[DB] Hệ thống cơ sở dữ liệu đã sẵn sàng.");
-
         } catch (ClassNotFoundException e) {
             throw new RuntimeException("Không tìm thấy MySQL Driver: " + e.getMessage());
         } catch (SQLException e) {
@@ -39,18 +42,16 @@ public class DatabaseManager {
         return instance;
     }
 
+    /** Mỗi DAO gọi getConnection() nhận được Connection riêng, tránh xung đột ResultSet */
     public Connection getConnection() {
         try {
-            if (connection == null || connection.isClosed()) {
-                connection = DriverManager.getConnection(DB_HOST + DB_NAME + DB_OPTIONS, USER, PASS);
-            }
+            return DriverManager.getConnection(dbUrl, USER, PASS);
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException("[DB] Không thể tạo connection: " + e.getMessage(), e);
         }
-        return connection;
     }
 
-    private void initDatabase() throws SQLException {
+    private void initDatabase(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("CREATE DATABASE IF NOT EXISTS " + DB_NAME);
             stmt.execute("USE " + DB_NAME);
@@ -60,7 +61,7 @@ public class DatabaseManager {
     }
 
     private void createTables(Statement stmt) throws SQLException {
-        // 1. Bảng users
+        // 1. Bảng users — có cột frozen_balance để lưu tiền đang giữ khi bidder đặt cọc
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(50) PRIMARY KEY,
@@ -71,33 +72,38 @@ public class DatabaseManager {
                 is_active TINYINT(1) NOT NULL DEFAULT 1,
                 shop_name VARCHAR(100),
                 balance DOUBLE NOT NULL DEFAULT 0.0,
+                frozen_balance DOUBLE NOT NULL DEFAULT 0.0,
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL
             ) ENGINE=InnoDB;
         """);
 
-        // 2. Bảng items
+        // 2. Bảng items — image_data cho phép NULL để tránh lỗi khi không upload ảnh
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS items (
                 id VARCHAR(50) PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 description TEXT,
-                base_price DOUBLE NOT NULL CHECK(base_price > 0),
-                category ENUM('ELECTRONICS','ART','VEHICLE') NOT NULL,
+                base_price DOUBLE NOT NULL,
+                category VARCHAR(50) NOT NULL,
                 seller_id VARCHAR(50) NOT NULL,
+                image_data LONGTEXT NULL DEFAULT NULL,
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL,
                 FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE
             ) ENGINE=InnoDB;
         """);
 
-        // 3. Bảng auctions
+        // [BUG FIX] Bỏ CHECK(base_price > 0) ở items vì MySQL 5.x bỏ qua nhưng MySQL 8 enforce
+        // có thể gây lỗi nếu giá đang được đặt bằng 0 khi tạo.
+
+        // 3. Bảng auctions — status dùng VARCHAR(30) để lưu các giá trị enum Java
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS auctions (
                 id VARCHAR(50) PRIMARY KEY,
                 item_id VARCHAR(50) NOT NULL,
                 seller_id VARCHAR(50) NOT NULL,
-                status ENUM('OPEN', 'CLOSED', 'CANCELLED', 'RUNNING', 'FINISHED', 'PAID') DEFAULT 'OPEN',
+                status VARCHAR(30) NOT NULL DEFAULT 'PENDING_APPROVAL',
                 current_price DOUBLE NOT NULL,
                 start_time DATETIME NOT NULL,
                 end_time DATETIME NOT NULL,
@@ -116,7 +122,7 @@ public class DatabaseManager {
                 id VARCHAR(50) PRIMARY KEY,
                 auction_id VARCHAR(50) NOT NULL,
                 bidder_id VARCHAR(50) NOT NULL,
-                bid_amount DOUBLE NOT NULL CHECK(bid_amount > 0),
+                bid_amount DOUBLE NOT NULL,
                 is_winning TINYINT(1) NOT NULL DEFAULT 0,
                 timestamp DATETIME NOT NULL,
                 FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE,
@@ -125,16 +131,35 @@ public class DatabaseManager {
         """);
 
         System.out.println("[DB] Đã khởi tạo cấu trúc bảng thành công.");
+        migrateSchema(stmt);
+    }
+
+    /**
+     * [FIX] Migrate schema — chạy mỗi lần server start.
+     * Thêm các cột còn thiếu ở DB cũ mà không xóa dữ liệu.
+     */
+    private void migrateSchema(Statement stmt) {
+        // [FIX 1] Thêm frozen_balance vào bảng users — đây là nguyên nhân chính
+        // khiến itemDAO.save() + auctionDAO.save() thất bại khi Bidder đặt giá:
+        // server gọi updateFrozenBalance() → SQL lỗi "Unknown column frozen_balance"
+        try { stmt.execute("ALTER TABLE users ADD COLUMN frozen_balance DOUBLE NOT NULL DEFAULT 0.0"); }
+        catch (java.sql.SQLException ignored) {} // Đã tồn tại thì bỏ qua
+
+        // [FIX 2] Đảm bảo image_data cho phép NULL để Seller tạo phiên không có ảnh không bị lỗi
+        try { stmt.execute("ALTER TABLE items MODIFY COLUMN image_data LONGTEXT NULL DEFAULT NULL"); }
+        catch (java.sql.SQLException ignored) {}
+
+        // Giữ lại các migration cũ
+        try { stmt.execute("ALTER TABLE items MODIFY COLUMN category VARCHAR(50) NOT NULL"); }
+        catch (java.sql.SQLException ignored) {}
+
+        try { stmt.execute("ALTER TABLE auctions MODIFY COLUMN status VARCHAR(30) NOT NULL DEFAULT 'PENDING_APPROVAL'"); }
+        catch (java.sql.SQLException ignored) {}
+
+        System.out.println("[DB] Migration schema OK.");
     }
 
     public void close() {
-        try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-                System.out.println("[DB] Đã đóng kết nối MySQL.");
-            }
-        } catch (SQLException e) {
-            System.err.println("[DB] Lỗi khi đóng: " + e.getMessage());
-        }
+        System.out.println("[DB] DatabaseManager closed.");
     }
 }
