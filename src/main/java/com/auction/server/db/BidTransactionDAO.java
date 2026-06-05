@@ -11,21 +11,23 @@ import java.util.List;
 
 public class BidTransactionDAO {
 
-    private final Connection conn;
+    // conn field removed
     private final UserDAO userDAO;
 
     public BidTransactionDAO() {
-        this.conn    = DatabaseManager.getInstance().getConnection();
         this.userDAO = new UserDAO();
     }
 
-    /** Lưu 1 BidTransaction mới vào DB */
+    private Connection getConn() {
+        return DatabaseManager.getInstance().getConnection();
+    }
+
     public void save(BidTransaction bid) throws SQLException {
         String sql = """
             INSERT INTO bid_transactions (id, auction_id, bidder_id, bid_amount, is_winning, timestamp)
             VALUES (?, ?, ?, ?, ?, ?)
         """;
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, bid.getId());
             ps.setString(2, bid.getAuctionId());
             ps.setString(3, bid.getBidder().getId());
@@ -44,7 +46,7 @@ public class BidTransactionDAO {
             ORDER BY bid_amount DESC, timestamp ASC
         """;
         List<BidTransaction> results = new ArrayList<>();
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, auctionId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
@@ -71,7 +73,7 @@ public class BidTransactionDAO {
             ORDER BY timestamp DESC
         """;
         List<BidTransaction> results = new ArrayList<>();
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, bidderId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
@@ -89,13 +91,6 @@ public class BidTransactionDAO {
         }
         return results;
     }
-
-    /**
-     * Lấy lịch sử bid của Bidder kèm tên sản phẩm (JOIN với auctions + items).
-     * Dùng cho màn hình Profile → tab "Lịch sử mua".
-     * auctionId trong BidTransaction sẽ được thay bằng tên sản phẩm thực tế
-     * thông qua một BidTransaction đặc biệt chứa itemName trong auctionId field.
-     */
     public List<BidTransaction> findByBidderWithItem(String bidderId, AuctionDAO auctionDAO) throws SQLException {
         String sql = """
             SELECT bt.id, bt.auction_id, bt.bid_amount, bt.is_winning, bt.timestamp,
@@ -107,7 +102,7 @@ public class BidTransactionDAO {
             ORDER BY bt.timestamp DESC
         """;
         List<BidTransaction> results = new ArrayList<>();
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, bidderId);
             ResultSet rs = ps.executeQuery();
 

@@ -4,77 +4,104 @@ import com.auction.shared.model.Auction;
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Seller;
 
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public final class DataStore {
 
     private DataStore() {
-        // Không cho khởi tạo
     }
 
-    /**
-     * Lưu danh sách Auction vào cơ sở dữ liệu SQL.
-     *
-     * @param auctions danh sách auction cần lưu
-     * @param filePath không còn sử dụng; lưu ý đây là API giữ ngược tương thích cũ.
-     */
+
     public static void saveAuctions(List<Auction> auctions, String filePath) throws SQLException {
+        saveAuctions(auctions);
+    }
+
+    public static void saveAuctions(List<Auction> auctions) throws SQLException {
         if (auctions == null) {
             throw new IllegalArgumentException("Auction list không được null");
         }
 
-        AuctionDAO auctionDAO = new AuctionDAO();
-        ItemDAO itemDAO = new ItemDAO();
-        UserDAO userDAO = new UserDAO();
+        // Lấy kết nối duy nhất từ DatabaseManager để đồng bộ trạng thái với các DAO
+        Connection conn = DatabaseManager.getInstance().getConnection();
+        boolean originalAutoCommit = conn.getAutoCommit();
 
-        for (Auction auction : auctions) {
-            if (auction == null) {
-                continue;
-            }
+        try {
+            // Tắt Auto-Commit để bắt đầu một Transaction (Giao dịch)
+            conn.setAutoCommit(false);
 
-            Seller seller = auction.getSeller();
-            if (seller != null && userDAO.findById(seller.getId()).isEmpty()) {
-                userDAO.save(seller);
-            }
+            AuctionDAO auctionDAO = new AuctionDAO();
+            ItemDAO itemDAO = new ItemDAO();
+            UserDAO userDAO = new UserDAO();
 
-            Item item = auction.getItem();
-            if (item != null) {
-                Seller itemSeller = item.getSeller();
-                if (itemSeller != null && userDAO.findById(itemSeller.getId()).isEmpty()) {
-                    userDAO.save(itemSeller);
+            // Bộ đệm trên RAM để lưu các ID đã xử lý trong lô dữ liệu hiện tại
+            Set<String> processedUserIds = new HashSet<>();
+            Set<String> processedItemIds = new HashSet<>();
+            Set<String> processedAuctionIds = new HashSet<>();
+
+            for (Auction auction : auctions) {
+                if (auction == null) {
+                    continue;
                 }
-                if (itemDAO.findById(item.getId()).isEmpty()) {
-                    itemDAO.save(item);
+
+                // Kiểm tra và lưu Seller của phiên đấu giá (Sử dụng UPSERT ngầm bên trong DAO)
+                Seller seller = auction.getSeller();
+                if (seller != null && !processedUserIds.contains(seller.getId())) {
+                    // ĐÃ TỐI ƯU: Loại bỏ userDAO.findById(). Khó bị trùng lặp nhờ lệnh UPSERT trong MySQL
+                    userDAO.save(seller); 
+                    processedUserIds.add(seller.getId());
+                }
+                Item item = auction.getItem();
+                if (item != null) {
+                    Seller itemSeller = item.getSeller();
+                    if (itemSeller != null && !processedUserIds.contains(itemSeller.getId())) {
+
+                        userDAO.save(itemSeller);
+                        processedUserIds.add(itemSeller.getId());
+                    }
+
+                    if (!processedItemIds.contains(item.getId())) {
+                        // ĐÃ TỐI ƯU: Gọi thẳng hàm save dạng UPSERT
+                        itemDAO.save(item);
+                        processedItemIds.add(item.getId());
+                    }
+                }
+
+                // Kiểm tra và lưu Người chiến thắng (Winner) nếu có
+                if (auction.getWinner() != null && !processedUserIds.contains(auction.getWinner().getId())) {
+                    // ĐÃ TỐI ƯU: Gọi thẳng hàm save dạng UPSERT
+                    userDAO.save(auction.getWinner());
+                    processedUserIds.add(auction.getWinner().getId());
+                }
+
+                // Lưu mới hoặc cập nhật thông tin phiên đấu giá (Auction)
+                if (!processedAuctionIds.contains(auction.getId())) {
+                    // ĐÃ TỐI ƯU: Gộp cả save và update làm một thông qua hàm upsert (hoặc hàm save mới)
+                    auctionDAO.save(auction);
+                    processedAuctionIds.add(auction.getId());
                 }
             }
-
-            if (auction.getWinner() != null && userDAO.findById(auction.getWinner().getId()).isEmpty()) {
-                userDAO.save(auction.getWinner());
-            }
-
-            if (auctionDAO.findById(auction.getId()).isEmpty()) {
-                auctionDAO.save(auction);
-            } else {
-                auctionDAO.update(auction);
-            }
+            // Xác nhận lưu toàn bộ dữ liệu vào DB nếu vòng lặp không xảy ra lỗi
+            conn.commit();
+        } catch (SQLException e) {
+            // Hủy bỏ toàn bộ các thay đổi nếu có bất kỳ lỗi nào xảy ra giữa chừng
+            conn.rollback();
+            throw e;
+        } finally {
+            // Khôi phục lại trạng thái ban đầu của kết nối để không ảnh hưởng luồng khác
+            conn.setAutoCommit(originalAutoCommit);
         }
     }
 
-    public static void saveAuctions(List<Auction> auctions) throws SQLException {
-        saveAuctions(auctions, null);
-    }
-
-    /**
-     * Đọc danh sách Auction từ cơ sở dữ liệu SQL.
-     *
-     * @param filePath không còn sử dụng; giữ API cho tương thích.
-     */
+    @Deprecated
     public static List<Auction> loadAuctions(String filePath) throws SQLException {
-        return new AuctionDAO().findAll();
+        return loadAuctions();
     }
 
     public static List<Auction> loadAuctions() throws SQLException {
-        return loadAuctions(null);
+        return new AuctionDAO().findAll();
     }
 }
