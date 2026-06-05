@@ -8,7 +8,10 @@ import com.auction.shared.model.BidTransaction;
 import com.auction.shared.model.Message;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -199,42 +202,9 @@ public class MyAuctionsController {
         System.out.println(">>> " + auction.getItem().getName()
                 + " bids=" + (bids == null ? "null" : bids.size()));
 
-        // spacer đẩy btnRow xuống đáy card
+        // spacer đẩy nội dung card
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
-
-        // ── Nút Sửa & Hủy phiên (Làm nút dày dặn và to hơn) ───
-        HBox btnRow = new HBox(10); // Tăng khoảng cách giữa 2 nút lên 10
-        Button btnEdit   = new Button("✏ Chỉnh sửa");
-        Button btnCancel = new Button("⊘ Hủy phiên");
-
-        btnEdit.setMaxWidth(Double.MAX_VALUE);
-        btnCancel.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(btnEdit,   Priority.ALWAYS);
-        HBox.setHgrow(btnCancel, Priority.ALWAYS);
-
-        // Nâng size chữ nút từ 11px -> 13px và thêm padding dọc 10px để nút dày dặn, dễ bấm
-        btnEdit.setStyle(
-                "-fx-background-color: #0d3d6e; -fx-text-fill: white;" +
-                        "-fx-font-size: 13px; -fx-font-weight: bold; -fx-border-color: rgba(255,255,255,0.25);" +
-                        "-fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;" +
-                        "-fx-cursor: hand; -fx-padding: 10 0 10 0;");
-        btnCancel.setStyle(
-                "-fx-background-color: rgba(180,30,30,0.55); -fx-text-fill: white;" +
-                        "-fx-font-size: 13px; -fx-font-weight: bold; -fx-border-color: rgba(255,255,255,0.20);" +
-                        "-fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;" +
-                        "-fx-cursor: hand; -fx-padding: 10 0 10 0;");
-
-        boolean isActive = auction.getStatus() == AuctionStatus.OPEN
-                || auction.getStatus() == AuctionStatus.RUNNING;
-        boolean isPending = auction.getStatus() == AuctionStatus.PENDING_APPROVAL;
-        btnEdit.setDisable(!isActive);
-        btnCancel.setDisable(!isActive && !isPending);
-
-        btnEdit.setOnAction(e -> handleEdit(auction));
-        btnCancel.setOnAction(e -> handleCancel(auction));
-
-        btnRow.getChildren().addAll(btnEdit, btnCancel);
 
         // Nội dung cố định
         card.getChildren().addAll(lblName, lblCategory, lblStatus, lblPrice, lblTime);
@@ -251,8 +221,7 @@ public class MyAuctionsController {
             card.getChildren().addAll(sep, lblHistoryTitle, buildHistoryBox(bids));
         }
 
-        // spacer + nút luôn ở cuối card
-        card.getChildren().addAll(spacer, btnRow);
+        card.getChildren().add(spacer);
         return card;
     }
 
@@ -352,31 +321,6 @@ public class MyAuctionsController {
             case "JEWELRY"     -> "rgba(255,230,80,0.30)";
             default            -> "rgba(255,255,255,0.20)";
         };
-    }
-
-    // ── Xử lý Sửa & Hủy phiên ────────────────────────────────────────────────
-    private void handleEdit(Auction auction) {
-        SceneManager.switchScene("CreateAuction.fxml", auction);
-    }
-
-    private void handleCancel(Auction auction) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                "Hủy phiên \"" + auction.getItem().getName() + "\"?\nHành động này không thể hoàn tác.",
-                ButtonType.YES, ButtonType.NO);
-        confirm.setHeaderText("Xác nhận hủy phiên");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.YES) {
-                try {
-                    ServerConnection.getInstance()
-                            .sendMessage(new Message("CANCEL_AUCTION", auction.getId()));
-                    auction.setStatus(AuctionStatus.CANCELLED);
-                    updateStats();
-                    applyFilter();
-                } catch (Exception e) {
-                    System.out.println("⚠ Không thể hủy phiên: " + e.getMessage());
-                }
-            }
-        });
     }
 
     // ── Pagination ─────────────────────────────────────────────────────────────

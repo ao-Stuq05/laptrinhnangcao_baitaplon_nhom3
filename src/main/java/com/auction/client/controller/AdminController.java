@@ -60,7 +60,6 @@ public class AdminController {
     @FXML private TableColumn<Auction, String>  colLivePrice;
     @FXML private TableColumn<Auction, String>  colLiveBids;
     @FXML private TableColumn<Auction, String>  colLiveTime;
-    @FXML private TableColumn<Auction, Void>    colLiveStatus;
 
     // ── Local data ────────────────────────────────────────────────────────────
     private List<User>    allUsers    = List.of();
@@ -239,27 +238,6 @@ public class AdminController {
             return new javafx.beans.property.SimpleStringProperty(txt);
         });
 
-        // Action: Đóng phiên
-        colLiveStatus.setCellFactory(col -> new TableCell<>() {
-            private final Button btnClose = new Button("⏹ Đóng phiên");
-            {
-                btnClose.setStyle(
-                        "-fx-background-color: rgba(245,158,11,0.80); -fx-text-fill: white;" +
-                                "-fx-background-radius: 5; -fx-border-radius: 5;" +
-                                "-fx-border-color: rgba(255,210,80,0.35); -fx-border-width: 1;" +
-                                "-fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 5 10; -fx-cursor: hand;");
-                btnClose.setOnAction(e -> handleCloseAuction(getTableView().getItems().get(getIndex())));
-            }
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty) { setGraphic(null); return; }
-                setGraphic(btnClose);
-                setAlignment(Pos.CENTER);
-                setStyle("-fx-background-color: transparent;");
-            }
-        });
-
         // Alternate rows với màu xanh nhạt cho live
         tableLiveAuctions.setRowFactory(tv -> new TableRow<>() {
             @Override
@@ -396,18 +374,6 @@ public class AdminController {
                     allUsers.stream().filter(u -> !(u instanceof Admin)).count()));
         });
 
-        sc.setAdminCloseAuctionCallback(auctionId -> {
-            if (auctionId == null) return;
-            allAuctions = allAuctions.stream()
-                    .map(a -> {
-                        if (a.getId().equals(auctionId)) a.setStatus(AuctionStatus.FINISHED);
-                        return a;
-                    })
-                    .collect(Collectors.toList());
-            refreshAuctionTables(allAuctions);
-            showInfo("Đã đóng phiên", "Phiên đấu giá đã được đóng bởi Admin.");
-        });
-
         sc.setAdminNewPendingCallback(auction -> {
             if (auction == null) return;
             boolean exists = allAuctions.stream().anyMatch(a -> a.getId().equals(auction.getId()));
@@ -494,20 +460,6 @@ public class AdminController {
         confirm.showAndWait().ifPresent(bt -> {
             if (bt == ButtonType.YES) {
                 try { ServerConnection.getInstance().sendMessage(new Message("REJECT_AUCTION", a.getId())); }
-                catch (IOException e) { showError("Lỗi", e.getMessage()); }
-            }
-        });
-    }
-
-    private void handleCloseAuction(Auction a) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                "Đóng ngay phiên \"" + a.getItem().getName() + "\"?\n" +
-                        "Người có giá cao nhất hiện tại sẽ được chốt thắng.",
-                ButtonType.YES, ButtonType.NO);
-        confirm.setHeaderText("⏹ ĐÓNG PHIÊN ĐẤU GIÁ");
-        confirm.showAndWait().ifPresent(bt -> {
-            if (bt == ButtonType.YES) {
-                try { ServerConnection.getInstance().sendMessage(new Message("ADMIN_CLOSE_AUCTION", a.getId())); }
                 catch (IOException e) { showError("Lỗi", e.getMessage()); }
             }
         });

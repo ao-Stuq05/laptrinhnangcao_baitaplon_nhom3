@@ -37,18 +37,6 @@
                             <Button fx:id="btnDashboard" maxWidth="Infinity" mnemonicParsing="false" onAction="#handleShowDashboard" style="-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-background-radius: 6; -fx-cursor: hand;" text="📊  Dashboard">
                                 <font><Font name="System Bold" size="13.0" /></font>
                             </Button>
-                            <Button fx:id="btnUsers" maxWidth="Infinity" mnemonicParsing="false" onAction="#handleShowUsers" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" text="👥  Người dùng">
-                                <font><Font name="System Bold" size="13.0" /></font>
-                            </Button>
-                            <Button fx:id="btnApprovals" maxWidth="Infinity" mnemonicParsing="false" onAction="#handleShowApprovals" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" text="✅  Duyệt phiên">
-                                <font><Font name="System Bold" size="13.0" /></font>
-                            </Button>
-                            <Button fx:id="btnLive" maxWidth="Infinity" mnemonicParsing="false" onAction="#handleShowLive" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" text="🔴  Đang diễn ra">
-                                <font><Font name="System Bold" size="13.0" /></font>
-                            </Button>
-                            <Button fx:id="btnHistory" maxWidth="Infinity" mnemonicParsing="false" onAction="#handleShowHistory" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;" text="📋  Lịch sử">
-                                <font><Font name="System Bold" size="13.0" /></font>
-                            </Button>
                         </children>
                     </VBox>
 
@@ -199,7 +187,6 @@
                                             <TableColumn fx:id="colLivePrice" prefWidth="120" text="Giá hiện tại" />
                                             <TableColumn fx:id="colLiveBids" prefWidth="80" text="Lượt bid" />
                                             <TableColumn fx:id="colLiveTime" prefWidth="90" text="Còn lại" />
-                                            <TableColumn fx:id="colLiveStatus" prefWidth="100" text="Trạng thái" />
                                         </columns>
                                     </TableView>
                                 </children>
