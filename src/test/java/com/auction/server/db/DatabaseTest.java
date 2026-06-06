@@ -1,6 +1,5 @@
 package com.auction.server.db;
 
-import com.auction.server.db.DatabaseManager;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.UUID;

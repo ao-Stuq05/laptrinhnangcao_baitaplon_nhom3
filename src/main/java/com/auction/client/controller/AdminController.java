@@ -4,12 +4,9 @@ import com.auction.client.SceneManager;
 import com.auction.client.network.ServerConnection;
 import com.auction.shared.model.*;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 
 import java.io.IOException;
 import java.time.LocalDateTime;

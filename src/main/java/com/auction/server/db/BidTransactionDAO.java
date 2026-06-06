@@ -1,6 +1,5 @@
 package com.auction.server.db;
 
-import com.auction.shared.model.Auction;
 import com.auction.shared.model.BidTransaction;
 import com.auction.shared.model.Bidder;
 
@@ -37,8 +36,6 @@ public class BidTransactionDAO {
             ps.executeUpdate();
         }
     }
-
-    /** Lấy tất cả bid của 1 phiên, sắp xếp theo giá giảm dần */
     public List<BidTransaction> findByAuction(String auctionId) throws SQLException {
         String sql = """
             SELECT * FROM bid_transactions

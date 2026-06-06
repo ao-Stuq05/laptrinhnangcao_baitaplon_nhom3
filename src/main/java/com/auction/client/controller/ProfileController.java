@@ -5,8 +5,7 @@ import com.auction.client.network.ServerConnection;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Bidder;
 import com.auction.shared.model.BidTransaction;
-import com.auction.shared.model.Message;   // ← đúng: shared.model.Message (không phải shared.network)
-import com.auction.shared.model.Seller;
+import com.auction.shared.model.Message;   
 import com.auction.shared.model.User;
 
 import javafx.application.Platform;

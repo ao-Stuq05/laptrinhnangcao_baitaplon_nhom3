@@ -13,7 +13,7 @@ import java.util.Optional;
 
 public class UserDAO {
 
-    // conn removed: each method gets a fresh connection via getConn()
+    
 
     public UserDAO() {
     }

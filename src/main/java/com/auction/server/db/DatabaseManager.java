@@ -42,7 +42,6 @@ public class DatabaseManager {
         return instance;
     }
 
-    /** Mỗi DAO gọi getConnection() nhận được Connection riêng, tránh xung đột ResultSet */
     public Connection getConnection() {
         try {
             return DriverManager.getConnection(dbUrl, USER, PASS);
@@ -94,8 +93,6 @@ public class DatabaseManager {
             ) ENGINE=InnoDB;
         """);
 
-        // [BUG FIX] Bỏ CHECK(base_price > 0) ở items vì MySQL 5.x bỏ qua nhưng MySQL 8 enforce
-        // có thể gây lỗi nếu giá đang được đặt bằng 0 khi tạo.
 
         // 3. Bảng auctions — status dùng VARCHAR(30) để lưu các giá trị enum Java
         stmt.execute("""
@@ -134,14 +131,8 @@ public class DatabaseManager {
         migrateSchema(stmt);
     }
 
-    /**
-     * [FIX] Migrate schema — chạy mỗi lần server start.
-     * Thêm các cột còn thiếu ở DB cũ mà không xóa dữ liệu.
-     */
+
     private void migrateSchema(Statement stmt) {
-        // [FIX 1] Thêm frozen_balance vào bảng users — đây là nguyên nhân chính
-        // khiến itemDAO.save() + auctionDAO.save() thất bại khi Bidder đặt giá:
-        // server gọi updateFrozenBalance() → SQL lỗi "Unknown column frozen_balance"
         try { stmt.execute("ALTER TABLE users ADD COLUMN frozen_balance DOUBLE NOT NULL DEFAULT 0.0"); }
         catch (java.sql.SQLException ignored) {} // Đã tồn tại thì bỏ qua
 
@@ -149,7 +140,7 @@ public class DatabaseManager {
         try { stmt.execute("ALTER TABLE items MODIFY COLUMN image_data LONGTEXT NULL DEFAULT NULL"); }
         catch (java.sql.SQLException ignored) {}
 
-        // Giữ lại các migration cũ
+        // Giữ lại các migration c  ũ
         try { stmt.execute("ALTER TABLE items MODIFY COLUMN category VARCHAR(50) NOT NULL"); }
         catch (java.sql.SQLException ignored) {}
 

@@ -1,6 +1,5 @@
 package com.auction.server.db;
 
-import com.auction.server.db.UserDAO;
 import com.auction.shared.model.Bidder;
 import java.sql.SQLException;
 import java.util.UUID;

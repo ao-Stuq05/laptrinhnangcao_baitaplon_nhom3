@@ -11,11 +11,9 @@ import com.auction.shared.model.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -23,7 +21,6 @@ public class AuctionServer {
     private int port;
     private final UserService userService = new UserService();
 
-    // Giữ danh sách tất cả ClientHandler để broadcast bid mới realtime
     private static final List<ClientHandler> connectedClients = new CopyOnWriteArrayList<>();
 
     public AuctionServer(int port) { this.port = port; }
@@ -81,7 +78,6 @@ public class AuctionServer {
     private void handleAuctionClosed(Auction auction) {
         UserDAO userDAO = new UserDAO();
         AuctionDAO auctionDAO = new AuctionDAO();
-        BidTransactionDAO bidTransactionDAO = new BidTransactionDAO();
 
         try {
             // 1. Cập nhật DB auction (status=FINISHED, winner_id)

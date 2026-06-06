@@ -1,7 +1,6 @@
 package com.auction.shared.model;
 
-import com.auction.shared.exception.AuctionClosedException;
-import com.auction.shared.exception.InvalidBidException;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
