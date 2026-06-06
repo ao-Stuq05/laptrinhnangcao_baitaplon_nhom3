@@ -500,8 +500,7 @@ public class ProductController {
 
     @FXML private void handleLogout() {
         cleanup();
-        try { ServerConnection.getInstance().sendMessage(new Message("LOGOUT", null)); }
-        catch (Exception ignored) {}
+        ServerConnection.getInstance().resetAndReconnect("localhost", 1234);
         SceneManager.switchScene("login.fxml");
     }
 

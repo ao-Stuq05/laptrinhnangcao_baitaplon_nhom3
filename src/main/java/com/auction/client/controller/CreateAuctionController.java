@@ -243,14 +243,10 @@ public class CreateAuctionController {
 
     @FXML
     private void handleLogout() {
-        try {
-            Message msg = new Message("LOGOUT", null);
-            ServerConnection.getInstance().sendMessage(msg);
-        } catch (Exception e) {
-            System.out.println("⚠ Không thể gửi lệnh đăng xuất tới Server!");
-        }
+        ServerConnection.getInstance().resetAndReconnect("localhost", 1234);
         SceneManager.switchScene("login.fxml");
     }
+
     @FXML private void handleGoMyAuction() {
         SceneManager.switchScene("MyAuctions.fxml");
     }

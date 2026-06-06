@@ -219,8 +219,8 @@ public class UIController {
     }
 
     @FXML private void handleLogout() {
-        try { ServerConnection.getInstance().sendMessage(new Message("LOGOUT", null)); }
-        catch (Exception e) { e.printStackTrace(); }
+        ServerConnection.getInstance().resetAndReconnect("localhost", 1234);
+        SceneManager.switchScene("login.fxml");
         SceneManager.switchScene("login.fxml");
     }
 

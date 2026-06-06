@@ -514,21 +514,10 @@ public class ProfileController {
 
     @FXML
     private void handleLogout() {
-        // Dọn callback trước khi rời màn hình
-        ServerConnection conn = ServerConnection.getInstance();
-        conn.setTopUpCallback(null);
-        conn.setMyAuctionCallback(null);
-        conn.setMyBidCallback(null);
-
-        try {
-            conn.sendMessage(new Message("LOGOUT", null));
-            System.out.println(">>> Đã gửi LOGOUT lên Server!");
-        } catch (Exception e) {
-            System.out.println("⚠ Không thể gửi LOGOUT!");
-            e.printStackTrace();
-        }
+        ServerConnection.getInstance().resetAndReconnect("localhost", 1234);
         SceneManager.switchScene("login.fxml");
     }
+
     @FXML private void handleGoMyAuction() {
         SceneManager.switchScene("MyAuctions.fxml");
     }

@@ -402,9 +402,7 @@ public class AdminController {
     }
 
     private void refreshAuctionTables(List<Auction> auctions) {
-        List<Auction> pending = auctions.stream()
-                .filter(a -> a.getStatus() == AuctionStatus.PENDING_APPROVAL)
-                .collect(Collectors.toList());
+        List<Auction> pending = new java.util.ArrayList<>(); // Khong con trang thai cho duyet
         List<Auction> live = auctions.stream()
                 .filter(a -> a.getStatus() == AuctionStatus.OPEN
                         || a.getStatus() == AuctionStatus.RUNNING)
@@ -480,7 +478,7 @@ public class AdminController {
         lblUserCount.setText("(" + filteredUsers.size() + ")");
 
         List<Auction> filteredPending = allAuctions.stream()
-                .filter(a -> a.getStatus() == AuctionStatus.PENDING_APPROVAL)
+                .filter(a -> false) // Khong con trang thai cho duyet
                 .filter(a -> a.getItem().getName().toLowerCase().contains(q)
                         || (a.getSeller() != null && a.getSeller().getUsername().toLowerCase().contains(q)))
                 .collect(Collectors.toList());
@@ -509,7 +507,7 @@ public class AdminController {
 
     @FXML
     private void handleLogout() {
-        try { ServerConnection.getInstance().close(); } catch (IOException ignored) {}
+        ServerConnection.getInstance().resetAndReconnect("localhost", 1234);
         SceneManager.switchScene("login.fxml");
     }
 
