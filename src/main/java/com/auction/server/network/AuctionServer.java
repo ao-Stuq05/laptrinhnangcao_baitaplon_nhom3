@@ -294,16 +294,17 @@ public class AuctionServer {
                                 String auctionId = "AUC-" + System.currentTimeMillis();
                                 Auction auction  = new Auction(auctionId, item, seller,
                                         startD, endD);
-                                // [FIX] Phải chờ admin duyệt trước khi mở phín
-                                auction.setStatus(com.auction.shared.model.AuctionStatus.PENDING_APPROVAL);
+                                // Tự động duyệt ngay khi seller tạo phiên, không cần admin duyệt
+                                auction.setStatus(com.auction.shared.model.AuctionStatus.OPEN);
 
                                 auctionDAO.save(auction);
-                                // Không register vào AuctionManager cho đến khi admin duyệt
+                                // Register vào AuctionManager ngay để đếm giờ và hiển thị cho buyer
+                                AuctionManager.getInstance().registerAuction(auction);
 
                                 out.writeObject(new Message("CREATE_AUCTION_SUCCESS", auction));
-                                System.out.println("[Server] CREATE_AUCTION OK: " + auctionId);
-                                // Thông báo real-time tới admin về phiên chờ duyệt mới
-                                broadcastToAdmins(new Message("NEW_PENDING_AUCTION", auction));
+                                System.out.println("[Server] CREATE_AUCTION OK (auto-approved): " + auctionId);
+                                // Broadcast tới tất cả client để cập nhật danh sách phiên
+                                broadcast(new Message("APPROVE_AUCTION_SUCCESS", auctionId), this);
 
                             } catch (IllegalArgumentException e) {
                                 out.writeObject(new Message("CREATE_AUCTION_FAILED", e.getMessage()));
@@ -817,13 +818,6 @@ public class AuctionServer {
                                     break;
                                 }
 
-                                // Chỉ duyệt nếu đang chờ duyệt
-                                if (auction.getStatus() != AuctionStatus.PENDING_APPROVAL) {
-                                    out.writeObject(new Message("APPROVE_AUCTION_SUCCESS", null));
-                                    out.flush();
-                                    break;
-                                }
-
                                 auction.setStatus(AuctionStatus.OPEN);
                                 auctionDAO.update(auction);
                                 AuctionManager.getInstance().registerAuction(auction);
@@ -859,12 +853,6 @@ public class AuctionServer {
                                     break;
                                 }
 
-                                // Chỉ từ chối nếu đang chờ duyệt
-                                if (auction.getStatus() != AuctionStatus.PENDING_APPROVAL) {
-                                    out.writeObject(new Message("REJECT_AUCTION_SUCCESS", null));
-                                    out.flush();
-                                    break;
-                                }
 
                                 auction.setStatus(AuctionStatus.CANCELLED);
                                 auctionDAO.update(auction);

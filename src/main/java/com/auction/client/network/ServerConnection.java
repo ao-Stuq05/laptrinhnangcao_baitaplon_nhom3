@@ -121,7 +121,7 @@ public class ServerConnection {
                 Auction a = (Auction) msg.getPayload();
                 Platform.runLater(() -> {
                     alert("Đăng bán thành công",
-                            "\"" + a.getItem().getName() + "\" đã được gửi và đang chờ admin duyệt!",
+                            "\"" + a.getItem().getName() + "\" đã được đăng và đang mở đấu giá!",
                             javafx.scene.control.Alert.AlertType.INFORMATION);
                     SceneManager.switchScene("UI.fxml");
                 });
@@ -303,6 +303,9 @@ public class ServerConnection {
                 String auctionId = (String) msg.getPayload();
                 if (auctionId != null && adminApproveCallback != null)
                     Platform.runLater(() -> adminApproveCallback.accept(auctionId));
+                // Refresh danh sach dau gia cho tat ca client (buyer, seller)
+                try { sendMessage(new com.auction.shared.model.Message("GET_AUCTIONS", null)); }
+                catch (Exception ignored) {}
             }
             case "REJECT_AUCTION_SUCCESS" -> {
                 String auctionId = (String) msg.getPayload();
@@ -338,6 +341,40 @@ public class ServerConnection {
     public void close() throws IOException {
         isRunning = false;
         if (socket != null) socket.close();
+    }
+
+    /**
+     * Goi khi logout: dong socket cu, xoa toan bo state va callbacks,
+     * sau do reconnect de san sang cho lan dang nhap tiep theo.
+     */
+    public void resetAndReconnect(String host, int port) {
+        try {
+            isRunning = false;
+            if (socket != null && !socket.isClosed()) socket.close();
+        } catch (Exception ignored) {}
+        // Xoa toan bo state
+        socket = null; out = null; in = null;
+        currentUser = null;
+        // Xoa tat ca callbacks
+        auctionListCallback = null;
+        bidUpdateCallback = null;
+        topUpCallback = null;
+        myAuctionCallback = null;
+        myBidCallback = null;
+        profileUpdateCallback = null;
+        auctionClosedCallback = null;
+        outbidCallback = null;
+        auctionExtendedCallback = null;
+        adminUserCallback = null;
+        adminAuctionCallback = null;
+        adminApproveCallback = null;
+        adminRejectCallback = null;
+        adminBanCallback = null;
+        adminCloseAuctionCallback = null;
+        adminNewPendingCallback = null;
+        // Reconnect cho lan dang nhap tiep
+        try { connect(host, port); }
+        catch (Exception e) { System.err.println("[ServerConnection] Reconnect that bai: " + e.getMessage()); }
     }
 
     private void alert(String header, String content,

@@ -103,7 +103,7 @@ public class DatabaseManager {
                 id VARCHAR(50) PRIMARY KEY,
                 item_id VARCHAR(50) NOT NULL,
                 seller_id VARCHAR(50) NOT NULL,
-                status VARCHAR(30) NOT NULL DEFAULT 'PENDING_APPROVAL',
+                status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
                 current_price DOUBLE NOT NULL,
                 start_time DATETIME NOT NULL,
                 end_time DATETIME NOT NULL,
@@ -153,8 +153,19 @@ public class DatabaseManager {
         try { stmt.execute("ALTER TABLE items MODIFY COLUMN category VARCHAR(50) NOT NULL"); }
         catch (java.sql.SQLException ignored) {}
 
-        try { stmt.execute("ALTER TABLE auctions MODIFY COLUMN status VARCHAR(30) NOT NULL DEFAULT 'PENDING_APPROVAL'"); }
+        try { stmt.execute("ALTER TABLE auctions MODIFY COLUMN status VARCHAR(30) NOT NULL DEFAULT 'OPEN'"); }
         catch (java.sql.SQLException ignored) {}
+
+        // Xoa bo trang thai PENDING_APPROVAL: chuyen tat ca phien cho duyet sang OPEN
+        try {
+            int updated = stmt.executeUpdate(
+                    "UPDATE auctions SET status = 'OPEN' WHERE status = 'PENDING_APPROVAL'"
+            );
+            if (updated > 0)
+                System.out.println("[DB] Migration: da chuyen " + updated + " phien PENDING_APPROVAL -> OPEN.");
+        } catch (java.sql.SQLException e) {
+            System.err.println("[DB] Migration PENDING->OPEN loi: " + e.getMessage());
+        }
 
         System.out.println("[DB] Migration schema OK.");
     }
