@@ -6,7 +6,6 @@ import com.auction.shared.model.*;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -18,10 +17,6 @@ public class AdminController {
 
     // ── Sidebar buttons ──────────────────────────────────────────────────────
     @FXML private Button btnDashboard;
-    @FXML private Button btnUsers;
-    @FXML private Button btnApprovals;
-    @FXML private Button btnLive;
-    @FXML private Button btnHistory;
     @FXML private Button btnLogout;
 
     // ── Search ───────────────────────────────────────────────────────────────
@@ -29,7 +24,6 @@ public class AdminController {
 
     // ── Stat cards ───────────────────────────────────────────────────────────
     @FXML private Label lblTotalUsers;
-    @FXML private Label lblPending;
     @FXML private Label lblLive;
 
     // ── Users table ──────────────────────────────────────────────────────────
@@ -41,14 +35,6 @@ public class AdminController {
     @FXML private TableColumn<User, String>  colBalance;
     @FXML private TableColumn<User, Void>    colUserAction;
 
-    // ── Pending auctions table ────────────────────────────────────────────────
-    @FXML private Label                         lblPendingCount;
-    @FXML private TableView<Auction>            tablePending;
-    @FXML private TableColumn<Auction, String>  colPendingItem;
-    @FXML private TableColumn<Auction, String>  colPendingSeller;
-    @FXML private TableColumn<Auction, String>  colPendingPrice;
-    @FXML private TableColumn<Auction, Void>    colPendingAction;
-
     // ── Live auctions table ───────────────────────────────────────────────────
     @FXML private Label                         lblLiveCount;
     @FXML private TableView<Auction>            tableLiveAuctions;
@@ -57,10 +43,13 @@ public class AdminController {
     @FXML private TableColumn<Auction, String>  colLivePrice;
     @FXML private TableColumn<Auction, String>  colLiveBids;
     @FXML private TableColumn<Auction, String>  colLiveTime;
+    @FXML private TableColumn<Auction, Void>    colLiveAction;
 
     // ── Local data ────────────────────────────────────────────────────────────
     private List<User>    allUsers    = List.of();
     private List<Auction> allAuctions = List.of();
+    /** Đếm số lượt bid realtime cho từng phiên (auctionId → count), tránh inject duplicate */
+    private final java.util.Map<String, Integer> liveBidCounts = new java.util.HashMap<>();
 
     private static final DateTimeFormatter DT_FMT =
             DateTimeFormatter.ofPattern("dd/MM HH:mm");
@@ -71,7 +60,6 @@ public class AdminController {
     @FXML
     public void initialize() {
         setupUserTable();
-        setupPendingTable();
         setupLiveTable();
         registerCallbacks();
         loadAll();
@@ -154,67 +142,6 @@ public class AdminController {
         applyCellTextStyle(tableUsers);
     }
 
-    private void setupPendingTable() {
-        colPendingItem.setCellValueFactory(d ->
-                new javafx.beans.property.SimpleStringProperty(
-                        d.getValue().getItem().getName()));
-        colPendingSeller.setCellValueFactory(d ->
-                new javafx.beans.property.SimpleStringProperty(
-                        d.getValue().getSeller() != null
-                                ? d.getValue().getSeller().getUsername() : "—"));
-        colPendingPrice.setCellValueFactory(d ->
-                new javafx.beans.property.SimpleStringProperty(
-                        String.format("%,.0f đ", d.getValue().getItem().getBasePrice())));
-
-        // Action: Duyệt + Từ chối
-        colPendingAction.setCellFactory(col -> new TableCell<>() {
-            private final Button btnApprove = new Button("✅ Duyệt");
-            private final Button btnReject  = new Button("❌ Từ chối");
-            private final HBox   box        = new HBox(6, btnApprove, btnReject);
-            {
-                box.setAlignment(Pos.CENTER);
-                btnApprove.setStyle(
-                        "-fx-background-color: rgba(34,197,94,0.75); -fx-text-fill: white;" +
-                                "-fx-background-radius: 5; -fx-border-radius: 5;" +
-                                "-fx-border-color: rgba(100,255,150,0.35); -fx-border-width: 1;" +
-                                "-fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 5 10; -fx-cursor: hand;");
-                btnReject.setStyle(
-                        "-fx-background-color: rgba(220,38,38,0.75); -fx-text-fill: white;" +
-                                "-fx-background-radius: 5; -fx-border-radius: 5;" +
-                                "-fx-border-color: rgba(255,100,100,0.35); -fx-border-width: 1;" +
-                                "-fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 5 10; -fx-cursor: hand;");
-                btnApprove.setOnAction(e -> handleApprove(getTableView().getItems().get(getIndex())));
-                btnReject.setOnAction(e  -> handleReject(getTableView().getItems().get(getIndex())));
-            }
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty) { setGraphic(null); return; }
-                setGraphic(box);
-                setStyle("-fx-background-color: transparent;");
-            }
-        });
-
-        // Alternate rows
-        tablePending.setRowFactory(tv -> new TableRow<>() {
-            @Override
-            protected void updateItem(Auction a, boolean empty) {
-                super.updateItem(a, empty);
-                if (empty || a == null) {
-                    setStyle("-fx-background-color: transparent;");
-                } else {
-                    setStyle(getIndex() % 2 == 0
-                            ? "-fx-background-color: rgba(255,255,255,0.04);"
-                            : "-fx-background-color: rgba(0,0,0,0.15);");
-                }
-            }
-        });
-
-        applyTableStyle(tablePending, "Không có phiên chờ duyệt");
-        applyColumnHeaderStyle(tablePending);
-        applyCellTextStyle(tablePending);
-    }
-
     private void setupLiveTable() {
         colLiveItem.setCellValueFactory(d ->
                 new javafx.beans.property.SimpleStringProperty(
@@ -228,11 +155,32 @@ public class AdminController {
                         String.format("%,.0f đ", d.getValue().getCurrentPrice())));
         colLiveBids.setCellValueFactory(d ->
                 new javafx.beans.property.SimpleStringProperty(
-                        String.valueOf(d.getValue().getBidCount())));
+                        String.valueOf(liveBidCounts.getOrDefault(d.getValue().getId(),
+                                d.getValue().getBidCount()))));
         colLiveTime.setCellValueFactory(d -> {
             LocalDateTime end = d.getValue().getEndTime();
             String txt = (end != null) ? end.format(DT_FMT) : "—";
             return new javafx.beans.property.SimpleStringProperty(txt);
+        });
+
+        // Action column: Hủy phiên
+        colLiveAction.setCellFactory(col -> new TableCell<>() {
+            private final Button btn = new Button("🚫 Hủy");
+            {
+                btn.setStyle(
+                        "-fx-background-color: rgba(220,38,38,0.75); -fx-text-fill: white;" +
+                        "-fx-background-radius: 5; -fx-border-radius: 5;" +
+                        "-fx-border-color: rgba(255,100,100,0.35); -fx-border-width: 1;" +
+                        "-fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 5 10; -fx-cursor: hand;");
+                btn.setOnAction(e -> handleCancelAuction(getTableView().getItems().get(getIndex())));
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) { setGraphic(null); return; }
+                setGraphic(btn);
+                setAlignment(javafx.geometry.Pos.CENTER);
+            }
         });
 
         // Alternate rows với màu xanh nhạt cho live
@@ -337,25 +285,11 @@ public class AdminController {
 
         sc.setAdminAuctionCallback(auctions -> {
             allAuctions = auctions;
+            // Khởi tạo/đồng bộ liveBidCounts từ dữ liệu server
+            for (Auction a : auctions) {
+                liveBidCounts.put(a.getId(), a.getBidCount());
+            }
             refreshAuctionTables(auctions);
-        });
-
-        sc.setAdminApproveCallback(auctionId -> {
-            if (auctionId == null) return;
-            allAuctions = allAuctions.stream()
-                    .map(a -> { if (a.getId().equals(auctionId)) a.setStatus(AuctionStatus.OPEN); return a; })
-                    .collect(Collectors.toList());
-            refreshAuctionTables(allAuctions);
-            showInfo("Đã duyệt phiên", "Phiên đấu giá đã được mở.");
-        });
-
-        sc.setAdminRejectCallback(auctionId -> {
-            if (auctionId == null) return;
-            allAuctions = allAuctions.stream()
-                    .filter(a -> !a.getId().equals(auctionId))
-                    .collect(Collectors.toList());
-            refreshAuctionTables(allAuctions);
-            showInfo("Đã từ chối", "Phiên đấu giá đã bị từ chối và hủy bỏ.");
         });
 
         sc.setAdminBanCallback(userId -> {
@@ -371,16 +305,40 @@ public class AdminController {
                     allUsers.stream().filter(u -> !(u instanceof Admin)).count()));
         });
 
-        sc.setAdminNewPendingCallback(auction -> {
-            if (auction == null) return;
-            boolean exists = allAuctions.stream().anyMatch(a -> a.getId().equals(auction.getId()));
-            if (!exists) {
-                java.util.List<Auction> updated = new java.util.ArrayList<>(allAuctions);
-                updated.add(0, auction);
-                allAuctions = updated;
-                refreshAuctionTables(allAuctions);
+        // Real-time bid update: chỉ cập nhật giá + counter, KHÔNG injectBid (tránh đếm 2 lần)
+        sc.setAdminBidUpdateCallback(tx -> {
+            String aid = tx.getAuctionId();
+            // Tăng counter
+            int newCount = liveBidCounts.getOrDefault(aid, 0) + 1;
+            liveBidCounts.put(aid, newCount);
+
+            // Cập nhật object trong bảng live
+            for (Auction a : tableLiveAuctions.getItems()) {
+                if (a.getId().equals(aid)) {
+                    a.setCurrentPriceOnly(tx.getBidAmount());
+                    // Ghi đè getBidCount() bằng cách dùng wrapper hiển thị từ liveBidCounts
+                    tableLiveAuctions.refresh();
+                    break;
+                }
             }
+            // Đồng bộ allAuctions
+            allAuctions.stream().filter(x -> x.getId().equals(aid))
+                    .findFirst().ifPresent(x -> x.setCurrentPriceOnly(tx.getBidAmount()));
         });
+
+        // Callback khi admin hủy phiên thành công
+        sc.setAdminCancelAuctionCallback(auctionId -> {
+            if (auctionId == null) return;
+            // Xóa khỏi bảng live ngay lập tức
+            tableLiveAuctions.getItems().removeIf(a -> a.getId().equals(auctionId));
+            allAuctions = allAuctions.stream()
+                    .filter(a -> !a.getId().equals(auctionId))
+                    .collect(Collectors.toList());
+            int liveSize = tableLiveAuctions.getItems().size();
+            lblLiveCount.setText("(" + liveSize + " live)");
+            lblLive.setText(String.valueOf(liveSize));
+        });
+
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -402,18 +360,14 @@ public class AdminController {
     }
 
     private void refreshAuctionTables(List<Auction> auctions) {
-        List<Auction> pending = new java.util.ArrayList<>(); // Khong con trang thai cho duyet
         List<Auction> live = auctions.stream()
                 .filter(a -> a.getStatus() == AuctionStatus.OPEN
                         || a.getStatus() == AuctionStatus.RUNNING)
                 .collect(Collectors.toList());
 
-        tablePending.getItems().setAll(pending);
         tableLiveAuctions.getItems().setAll(live);
 
-        lblPendingCount.setText("(" + pending.size() + ")");
         lblLiveCount.setText("(" + live.size() + " live)");
-        lblPending.setText(String.valueOf(pending.size()));
         lblLive.setText(String.valueOf(live.size()));
     }
 
@@ -434,27 +388,16 @@ public class AdminController {
         });
     }
 
-    private void handleApprove(Auction a) {
+    private void handleCancelAuction(Auction a) {
+        String itemName = a.getItem() != null ? a.getItem().getName() : a.getId();
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                "Duyệt phiên đấu giá \"" + a.getItem().getName() + "\"?",
+                "Hủy phiên \"" + itemName + "\"?\n\nTiền của tất cả bidder sẽ được hoàn trả.",
                 ButtonType.YES, ButtonType.NO);
-        confirm.setHeaderText("XÁC NHẬN DUYỆT PHIÊN");
+        confirm.setHeaderText("HỦY PHIÊN ĐẤU GIÁ");
         confirm.showAndWait().ifPresent(bt -> {
             if (bt == ButtonType.YES) {
-                try { ServerConnection.getInstance().sendMessage(new Message("APPROVE_AUCTION", a.getId())); }
-                catch (IOException e) { showError("Lỗi", e.getMessage()); }
-            }
-        });
-    }
-
-    private void handleReject(Auction a) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                "Từ chối phiên \"" + a.getItem().getName() + "\"? Phiên sẽ bị hủy.",
-                ButtonType.YES, ButtonType.NO);
-        confirm.setHeaderText("XÁC NHẬN TỪ CHỐI");
-        confirm.showAndWait().ifPresent(bt -> {
-            if (bt == ButtonType.YES) {
-                try { ServerConnection.getInstance().sendMessage(new Message("REJECT_AUCTION", a.getId())); }
+                try { ServerConnection.getInstance().sendMessage(
+                        new Message("ADMIN_CANCEL_AUCTION", a.getId())); }
                 catch (IOException e) { showError("Lỗi", e.getMessage()); }
             }
         });
@@ -477,13 +420,6 @@ public class AdminController {
         tableUsers.getItems().setAll(filteredUsers);
         lblUserCount.setText("(" + filteredUsers.size() + ")");
 
-        List<Auction> filteredPending = allAuctions.stream()
-                .filter(a -> false) // Khong con trang thai cho duyet
-                .filter(a -> a.getItem().getName().toLowerCase().contains(q)
-                        || (a.getSeller() != null && a.getSeller().getUsername().toLowerCase().contains(q)))
-                .collect(Collectors.toList());
-        tablePending.getItems().setAll(filteredPending);
-
         List<Auction> filteredLive = allAuctions.stream()
                 .filter(a -> a.getStatus() == AuctionStatus.OPEN || a.getStatus() == AuctionStatus.RUNNING)
                 .filter(a -> a.getItem().getName().toLowerCase().contains(q)
@@ -495,14 +431,9 @@ public class AdminController {
     // ─────────────────────────────────────────────────────────────────────────
     //  FXML HANDLERS — Sidebar
     // ─────────────────────────────────────────────────────────────────────────
-    @FXML private void handleShowDashboard()  { highlightNav(btnDashboard); loadAll(); }
-    @FXML private void handleShowUsers()      { highlightNav(btnUsers);     tableUsers.scrollTo(0); }
-    @FXML private void handleShowApprovals()  { highlightNav(btnApprovals); tablePending.scrollTo(0); }
-    @FXML private void handleShowLive()       { highlightNav(btnLive);      tableLiveAuctions.scrollTo(0); }
-    @FXML private void handleShowHistory()    { highlightNav(btnHistory);   loadAll(); }
+    @FXML private void handleShowDashboard()  { loadAll(); }
 
     @FXML private void handleRefreshUsers()   { try { ServerConnection.getInstance().sendMessage(new Message("GET_ALL_USERS",    null)); } catch (IOException ignored) {} }
-    @FXML private void handleRefreshPending() { try { ServerConnection.getInstance().sendMessage(new Message("GET_ALL_AUCTIONS", null)); } catch (IOException ignored) {} }
     @FXML private void handleRefreshLive()    { try { ServerConnection.getInstance().sendMessage(new Message("GET_ALL_AUCTIONS", null)); } catch (IOException ignored) {} }
 
     @FXML
@@ -514,14 +445,6 @@ public class AdminController {
     // ─────────────────────────────────────────────────────────────────────────
     //  HELPERS
     // ─────────────────────────────────────────────────────────────────────────
-    private void highlightNav(Button active) {
-        String activeStyle = "-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-background-radius: 6; -fx-cursor: hand;";
-        String normalStyle = "-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-alignment: CENTER-LEFT; -fx-padding: 10 14; -fx-cursor: hand;";
-        for (Button b : new Button[]{btnDashboard, btnUsers, btnApprovals, btnLive, btnHistory}) {
-            b.setStyle(b == active ? activeStyle : normalStyle);
-        }
-    }
-
     private void showInfo(String header, String content) {
         Alert a = new Alert(Alert.AlertType.INFORMATION, content);
         a.setHeaderText(header);

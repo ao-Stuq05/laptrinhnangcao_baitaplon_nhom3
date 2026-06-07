@@ -290,7 +290,6 @@ public class AuctionServer {
                                 String auctionId = "AUC-" + System.currentTimeMillis();
                                 Auction auction  = new Auction(auctionId, item, seller,
                                         startD, endD);
-                                // Tự động duyệt ngay khi seller tạo phiên, không cần admin duyệt
                                 auction.setStatus(com.auction.shared.model.AuctionStatus.OPEN);
 
                                 auctionDAO.save(auction);
@@ -298,9 +297,13 @@ public class AuctionServer {
                                 AuctionManager.getInstance().registerAuction(auction);
 
                                 out.writeObject(new Message("CREATE_AUCTION_SUCCESS", auction));
-                                System.out.println("[Server] CREATE_AUCTION OK (auto-approved): " + auctionId);
-                                // Broadcast tới tất cả client để cập nhật danh sách phiên
-                                broadcast(new Message("APPROVE_AUCTION_SUCCESS", auctionId), this);
+                                System.out.println("[Server] CREATE_AUCTION OK: " + auctionId);
+                                // Broadcast danh sách mới tới bidder/seller
+                                List<Auction> updatedList = auctionDAO.findActive();
+                                broadcast(new Message("GET_AUCTIONS_SUCCESS", (java.io.Serializable) updatedList), this);
+                                // Broadcast GET_ALL_AUCTIONS_SUCCESS tới admin để dashboard tự refresh
+                                List<Auction> allForAdmin = auctionDAO.findAll();
+                                broadcastToAdmins(new Message("GET_ALL_AUCTIONS_SUCCESS", (java.io.Serializable) allForAdmin));
 
                             } catch (IllegalArgumentException e) {
                                 out.writeObject(new Message("CREATE_AUCTION_FAILED", e.getMessage()));
@@ -378,10 +381,7 @@ public class AuctionServer {
                                     AuctionManager.getInstance().registerAuction(auction);
                                 }
 
-                                // ── CRITICAL SECTION ──────────────────────────
-                                // Đồng bộ trên object auction để tránh race condition:
-                                // Hai thread không thể vào cùng lúc → loại bỏ lost update
-                                // và duplicate BidTransaction khi nhiều bidder đặt gần đồng thời.
+
                                 BidTransaction tx;
                                 Bidder previousLeader;
                                 synchronized (auction) {
@@ -795,76 +795,6 @@ public class AuctionServer {
                             out.flush();
                         }
 
-                        // ── ADMIN: DỰA PHIÊN ─────────────────────────────────
-                        case "APPROVE_AUCTION" -> {
-                            if (currentUser == null || !(currentUser instanceof Admin)) {
-                                out.writeObject(new Message("APPROVE_AUCTION_SUCCESS", null));
-                                out.flush();
-                                break;
-                            }
-                            try {
-                                String auctionId = (String) request.getPayload();
-                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
-                                if (auction == null) {
-                                    auction = auctionDAO.findById(auctionId).orElse(null);
-                                }
-                                if (auction == null) {
-                                    out.writeObject(new Message("APPROVE_AUCTION_SUCCESS", null));
-                                    out.flush();
-                                    break;
-                                }
-
-                                auction.setStatus(AuctionStatus.OPEN);
-                                auctionDAO.update(auction);
-                                AuctionManager.getInstance().registerAuction(auction);
-
-                                out.writeObject(new Message("APPROVE_AUCTION_SUCCESS", auctionId));
-                                System.out.println("[Server] APPROVE_AUCTION OK: " + auctionId);
-
-                                // Broadcast để seller và clients khác cập nhật UI
-                                broadcast(new Message("APPROVE_AUCTION_SUCCESS", auctionId), this);
-                            } catch (Exception e) {
-                                out.writeObject(new Message("APPROVE_AUCTION_SUCCESS", null));
-                                e.printStackTrace();
-                            }
-                            out.flush();
-                        }
-
-                        // ── ADMIN: TỪ CHốI PHIÊN ─────────────────────────────
-                        case "REJECT_AUCTION" -> {
-                            if (currentUser == null || !(currentUser instanceof Admin)) {
-                                out.writeObject(new Message("REJECT_AUCTION_SUCCESS", null));
-                                out.flush();
-                                break;
-                            }
-                            try {
-                                String auctionId = (String) request.getPayload();
-                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
-                                if (auction == null) {
-                                    auction = auctionDAO.findById(auctionId).orElse(null);
-                                }
-                                if (auction == null) {
-                                    out.writeObject(new Message("REJECT_AUCTION_SUCCESS", null));
-                                    out.flush();
-                                    break;
-                                }
-
-
-                                auction.setStatus(AuctionStatus.CANCELLED);
-                                auctionDAO.update(auction);
-
-                                out.writeObject(new Message("REJECT_AUCTION_SUCCESS", auctionId));
-                                System.out.println("[Server] REJECT_AUCTION OK: " + auctionId);
-
-                                // Broadcast để seller cập nhật UI
-                                broadcast(new Message("REJECT_AUCTION_SUCCESS", auctionId), this);
-                            } catch (Exception e) {
-                                out.writeObject(new Message("REJECT_AUCTION_SUCCESS", null));
-                                e.printStackTrace();
-                            }
-                            out.flush();
-                        }
-
                         // ── ADMIN: KHOÁ/MỞ KHOÁ NGƯỜI DÙNG ──────────────────
                         case "BAN_USER" -> {
                             if (currentUser == null || !(currentUser instanceof Admin)) {
@@ -892,8 +822,128 @@ public class AuctionServer {
 
                                 // Broadcast để admin khác cập nhật UI
                                 broadcast(new Message("BAN_USER_SUCCESS", userId), this);
+                                if (!newStatus) {
+                                    for (ClientHandler c : connectedClients) {
+                                        if (c.getCurrentUser() != null
+                                                && c.getCurrentUser().getId().equals(userId)) {
+                                            try {
+                                                c.sendMessage(new Message("FORCE_LOGOUT", "Tai khoan cua ban da bi khoa boi Admin."));
+                                            } catch (IOException ignored) {}
+                                            break;
+                                        }
+                                    }
+                                }
                             } catch (Exception e) {
                                 out.writeObject(new Message("BAN_USER_SUCCESS", null));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── ADMIN: HỦY PHIÊN (CANCELLED) — unfreeze tất cả bidder ─
+                        case "ADMIN_CANCEL_AUCTION" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("ADMIN_CANCEL_AUCTION_FAILED",
+                                        "Không có quyền truy cập!"));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                String auctionId = (String) request.getPayload();
+                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
+                                if (auction == null) {
+                                    auction = auctionDAO.findById(auctionId).orElse(null);
+                                }
+                                if (auction == null) {
+                                    out.writeObject(new Message("ADMIN_CANCEL_AUCTION_FAILED",
+                                            "Không tìm thấy phiên: " + auctionId));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Chỉ hủy phiên OPEN hoặc RUNNING
+                                if (auction.getStatus() != AuctionStatus.OPEN
+                                        && auction.getStatus() != AuctionStatus.RUNNING) {
+                                    out.writeObject(new Message("ADMIN_CANCEL_AUCTION_FAILED",
+                                            "Phiên đã kết thúc hoặc đã hủy!"));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Unfreeze tất cả bidder đã tham gia
+                                java.util.Map<String, Bidder> bidders = new java.util.LinkedHashMap<>();
+                                for (BidTransaction tx : auction.getBids()) {
+                                    bidders.put(tx.getBidder().getId(), tx.getBidder());
+                                }
+                                for (Bidder bidder : bidders.values()) {
+                                    bidder.unfreezeForAuction(auctionId);
+                                    userDAO.updateFrozenBalance(bidder.getId(), bidder.getFrozenBalance());
+                                    System.out.printf("[Admin Cancel] Unfreeze bidder %s%n",
+                                            bidder.getUsername());
+                                }
+
+                                // Đặt trạng thái CANCELLED và lưu DB
+                                auction.setStatus(AuctionStatus.CANCELLED);
+                                auctionDAO.update(auction);
+                                // Huỷ lịch đóng tự động
+                                AuctionManager.getInstance().closeAuction(auctionId);
+
+                                out.writeObject(new Message("ADMIN_CANCEL_AUCTION_SUCCESS", auctionId));
+                                System.out.println("[Server] ADMIN_CANCEL_AUCTION OK: " + auctionId);
+
+                                // Broadcast để tất cả clients cập nhật UI
+                                broadcast(new Message("AUCTION_CLOSED", auction), this);
+                                broadcast(new Message("ADMIN_CANCEL_AUCTION_SUCCESS", auctionId), this);
+
+                                // Gửi thông báo riêng AUCTION_CANCELLED tới Seller
+                                User seller = auction.getSeller();
+                                if (seller != null) {
+                                    for (ClientHandler c : connectedClients) {
+                                        User cu = c.getCurrentUser();
+                                        if (cu != null && cu.getId().equals(seller.getId())) {
+                                            try {
+                                                HashMap<String, Object> np = new HashMap<>();
+                                                np.put("auction", auction);
+                                                np.put("reason", "Phiên đấu giá \""
+                                                        + auction.getItem().getName()
+                                                        + "\" của bạn đã bị Admin hủy.");
+                                                c.sendMessage(new Message("AUCTION_CANCELLED", np));
+                                            } catch (IOException ignored) {}
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // Gửi thông báo riêng AUCTION_CANCELLED tới tất cả Bidder đã tham gia
+                                java.util.Set<String> notifiedBidders = new java.util.HashSet<>();
+                                for (BidTransaction tx : auction.getBids()) {
+                                    String bidderId = tx.getBidder().getId();
+                                    if (notifiedBidders.contains(bidderId)) continue;
+                                    notifiedBidders.add(bidderId);
+                                    for (ClientHandler c : connectedClients) {
+                                        User cu = c.getCurrentUser();
+                                        if (cu != null && cu.getId().equals(bidderId)) {
+                                            try {
+                                                HashMap<String, Object> np = new HashMap<>();
+                                                np.put("auction", auction);
+                                                np.put("reason", "Phiên đấu giá \""
+                                                        + auction.getItem().getName()
+                                                        + "\" đã bị Admin hủy. Tiền của bạn đã được hoàn trả.");
+                                                c.sendMessage(new Message("AUCTION_CANCELLED", np));
+                                            } catch (IOException ignored) {}
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // Refresh danh sách admin
+                                List<Auction> allForAdmin = auctionDAO.findAll();
+                                broadcastToAdmins(new Message("GET_ALL_AUCTIONS_SUCCESS",
+                                        (java.io.Serializable) allForAdmin));
+
+                            } catch (Exception e) {
+                                out.writeObject(new Message("ADMIN_CANCEL_AUCTION_FAILED",
+                                        "Lỗi server: " + e.getMessage()));
                                 e.printStackTrace();
                             }
                             out.flush();
