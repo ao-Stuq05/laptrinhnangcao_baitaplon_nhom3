@@ -363,7 +363,7 @@ File `.github/workflows/ci.yml` tự động chạy trên mỗi push/PR vào `ma
 
 |Loại|Link|
 |-|-|
-|📄 Báo cáo PDF|[Xem trên Google Drive](LINK_BAO_CAO_PDF)|
+|📄 Báo cáo PDF|[Xem trên Google Drive](https://drive.google.com/file/d/1GD0g_dUNEpCIv8UasWqFnjBIR7qxwFOb/view?usp=sharing)|
 |🎬 Video Demo|[Xem trên Google Drive](https://drive.google.com/file/d/1iaxYUkl_zlDD85rBpR1anBbav9LT_QC5/view?usp=drive_link)|
 
 > \*\*Nội dung video demo (≤ 4 phút):\*\*
