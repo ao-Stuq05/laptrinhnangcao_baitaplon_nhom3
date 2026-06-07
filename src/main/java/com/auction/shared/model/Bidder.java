@@ -1,5 +1,8 @@
 package com.auction.shared.model;
 
+import com.auction.shared.exception.AuctionClosedException;
+import com.auction.shared.exception.InvalidBidException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -114,7 +117,7 @@ public class Bidder extends User implements Serializable {
     }
 
     // ── Bid history ───────────────────────────────────────────────────────────
-    public void bid(Auction auction, double amount) { auction.placeBid(this, amount); }
+    public void bid(Auction auction, double amount) throws InvalidBidException, AuctionClosedException { auction.placeBid(this, amount); }
     public List<BidTransaction> getBidHistory()     { return bidHistory; }
 
     @Override

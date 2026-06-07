@@ -115,24 +115,28 @@ public class Auction extends Entity implements Serializable {
         }
     }
 
-    public synchronized void placeBid(Bidder bidder, double amount) {
-        if (status != AuctionStatus.OPEN && status != AuctionStatus.RUNNING) {
-            System.out.println("Lỗi: Phiên không mở!");
-            return;
-        }
-        if (amount <= currentPrice) {
-            System.out.println("Lỗi: Giá phải cao hơn " + currentPrice);
-            return;
+    public synchronized void placeBid(Bidder bidder, double amount)
+            throws AuctionClosedException, InvalidBidException {
+
+        // Kiểm tra trạng thái phiên
+        if (this.status != AuctionStatus.RUNNING) {
+            throw new AuctionClosedException(getId(), this.status);
         }
 
-        currentPrice       = amount;
-        highestBidder      = bidder;
-        status             = AuctionStatus.RUNNING;
+        // Kiểm tra số tiền
+        if (amount <= this.currentPrice) {
+            throw new InvalidBidException(amount, this.currentPrice);
+        }
+
+        // bid hợp lệ rồi thì cập nhật thông tin
+        this.currentPrice  = amount;
+        this.highestBidder = bidder;
 
         BidTransaction tx = new BidTransaction(bidder, amount, getId());
         bidHistory.add(tx);
+        bidder.getBidHistory().add(tx);
 
-        System.out.println("✓ " + bidder.getUsername() + " đặt giá " + amount);
+        System.out.println("✓ " + bidder.getUsername() + " đặt " + amount);
         notifyObservers(tx);
     }
 
