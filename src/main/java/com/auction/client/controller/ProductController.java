@@ -95,6 +95,7 @@ public class ProductController {
         conn.setBidUpdateCallback(this::onNewBidReceived);
         conn.setAuctionClosedCallback(this::onAuctionClosed);
         conn.setOutbidCallback(this::onOutbid);
+        conn.setAuctionExtendedCallback(this::onAuctionExtended);
 
         User currentUser = conn.getCurrentUser();
         boolean isSeller = currentUser != null && "SELLER".equals(currentUser.getRole());
@@ -406,6 +407,21 @@ public class ProductController {
         }
     }
 
+    /**
+     * Anti-sniping: Server gia hạn phiên vì có bid trong 60 giây cuối.
+     * Cập nhật lại endTime của auction hiện tại và khởi động lại countdown.
+     */
+    private void onAuctionExtended(String auctionId, String newEndTimeStr) {
+        if (currentAuction == null || !currentAuction.getId().equals(auctionId)) return;
+        java.time.LocalDateTime newEnd = java.time.LocalDateTime.parse(newEndTimeStr);
+        currentAuction.setEndTime(newEnd);
+        Platform.runLater(() -> {
+            if (countdown != null) countdown.stop();
+            startCountdown(currentAuction);
+            showBidMsg("⏱ Phiên được gia hạn thêm 60 giây do có bid mới!", false);
+        });
+    }
+
     private void onAuctionClosed(Auction closed) {
         if (currentAuction == null || !closed.getId().equals(currentAuction.getId())) return;
         Platform.runLater(() -> {
@@ -484,8 +500,7 @@ public class ProductController {
 
     @FXML private void handleLogout() {
         cleanup();
-        try { ServerConnection.getInstance().sendMessage(new Message("LOGOUT", null)); }
-        catch (Exception ignored) {}
+        ServerConnection.getInstance().resetAndReconnect("localhost", 1234);
         SceneManager.switchScene("login.fxml");
     }
 
@@ -495,6 +510,7 @@ public class ProductController {
         conn.setBidUpdateCallback(null);
         conn.setAuctionClosedCallback(null);
         conn.setOutbidCallback(null);
+        conn.setAuctionExtendedCallback(null);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

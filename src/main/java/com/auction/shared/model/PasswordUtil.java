@@ -15,7 +15,6 @@ public class PasswordUtil {
     }
 
     /**
-     * Xác thực password so với hash đã lưu.
      * 
      * @param rawPassword Password người dùng nhập
      * @param hashedPassword Password đã hash trong database

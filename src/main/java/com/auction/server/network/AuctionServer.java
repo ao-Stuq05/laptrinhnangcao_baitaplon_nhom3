@@ -11,11 +11,9 @@ import com.auction.shared.model.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -23,7 +21,6 @@ public class AuctionServer {
     private int port;
     private final UserService userService = new UserService();
 
-    // Giữ danh sách tất cả ClientHandler để broadcast bid mới realtime
     private static final List<ClientHandler> connectedClients = new CopyOnWriteArrayList<>();
 
     public AuctionServer(int port) { this.port = port; }
@@ -81,7 +78,6 @@ public class AuctionServer {
     private void handleAuctionClosed(Auction auction) {
         UserDAO userDAO = new UserDAO();
         AuctionDAO auctionDAO = new AuctionDAO();
-        BidTransactionDAO bidTransactionDAO = new BidTransactionDAO();
 
         try {
             // 1. Cập nhật DB auction (status=FINISHED, winner_id)
@@ -173,6 +169,19 @@ public class AuctionServer {
         }
     }
 
+    /** Broadcast chỉ tới các client đang đăng nhập với role Admin */
+    private static void broadcastToAdmins(Message msg) {
+        for (ClientHandler c : connectedClients) {
+            if (c.currentUser instanceof Admin) {
+                try {
+                    c.sendMessage(msg);
+                } catch (IOException e) {
+                    System.err.println("[BroadcastAdmin] Loi gui toi admin: " + e.getMessage());
+                }
+            }
+        }
+    }
+
     private class ClientHandler extends Thread {
         private Socket clientSocket;
         private ObjectOutputStream out;
@@ -251,20 +260,22 @@ public class AuctionServer {
                                 String category  = (String) payload.get("category");
                                 String desc      = (String) payload.get("description");
                                 double price     = (double) payload.get("startPrice");
-                                // Nhận LocalDateTime dạng ISO (yyyy-MM-ddTHH:mm:ss) từ client
-                                java.time.LocalDateTime startD = java.time.LocalDateTime.parse(
-                                        (String) payload.get("startDateTime"));
-                                java.time.LocalDateTime endD = java.time.LocalDateTime.parse(
-                                        (String) payload.get("endDateTime"));
+                                // [FIX] Nhận durationSeconds từ client, tính endTime theo đồng hồ server
+                                long durationSeconds = ((Number) payload.get("durationSeconds")).longValue();
+                                java.time.LocalDateTime startD = java.time.LocalDateTime.now();
+                                java.time.LocalDateTime endD   = startD.plusSeconds(durationSeconds);
 
                                 String itemId = UUID.randomUUID().toString();
-                                Item item = switch (category) {
-                                    case "Điện tử"            -> new Electronics(itemId, name, desc, price, seller, 12);
-                                    case "Nghệ thuật"         -> new Art(itemId, name, desc, price, seller, "Unknown", 2024);
-                                    case "Xe cộ"              -> new Vehicle(itemId, name, desc, price, seller, "Unknown", 0);
-                                    case "Đồng hồ & Trang sức",
-                                         "Cổ vật", "Khác"    -> new Electronics(itemId, name, desc, price, seller, 0);
-                                    default -> throw new IllegalArgumentException("Danh mục không hợp lệ: " + category);
+                                // [FIX] Chuẩn hoá category sang enum string để DB nhất quán
+                                String categoryEnum = switch (category) {
+                                    case "Nghệ thuật", "Nghệ thuật & Cổ vật" -> "ART";
+                                    case "Xe cộ", "Xe cội" -> "VEHICLE";
+                                    default -> "ELECTRONICS";
+                                };
+                                Item item = switch (categoryEnum) {
+                                    case "ART"     -> new Art(itemId, name, desc, price, seller, "Unknown", 2024);
+                                    case "VEHICLE" -> new Vehicle(itemId, name, desc, price, seller, "Unknown", 0);
+                                    default        -> new Electronics(itemId, name, desc, price, seller, 12);
                                 };
 
                                 // ── Gán Base64 ảnh vào item nếu có ─────────────
@@ -279,12 +290,20 @@ public class AuctionServer {
                                 String auctionId = "AUC-" + System.currentTimeMillis();
                                 Auction auction  = new Auction(auctionId, item, seller,
                                         startD, endD);
+                                auction.setStatus(com.auction.shared.model.AuctionStatus.OPEN);
 
                                 auctionDAO.save(auction);
+                                // Register vào AuctionManager ngay để đếm giờ và hiển thị cho buyer
                                 AuctionManager.getInstance().registerAuction(auction);
 
                                 out.writeObject(new Message("CREATE_AUCTION_SUCCESS", auction));
                                 System.out.println("[Server] CREATE_AUCTION OK: " + auctionId);
+                                // Broadcast danh sách mới tới bidder/seller
+                                List<Auction> updatedList = auctionDAO.findActive();
+                                broadcast(new Message("GET_AUCTIONS_SUCCESS", (java.io.Serializable) updatedList), this);
+                                // Broadcast GET_ALL_AUCTIONS_SUCCESS tới admin để dashboard tự refresh
+                                List<Auction> allForAdmin = auctionDAO.findAll();
+                                broadcastToAdmins(new Message("GET_ALL_AUCTIONS_SUCCESS", (java.io.Serializable) allForAdmin));
 
                             } catch (IllegalArgumentException e) {
                                 out.writeObject(new Message("CREATE_AUCTION_FAILED", e.getMessage()));
@@ -339,6 +358,9 @@ public class AuctionServer {
                                 out.flush();
                                 break;
                             }
+                            Message bidResult = null;
+                            Message outbidMsg = null;
+                            Message newBidMsg = null;
                             try {
                                 @SuppressWarnings("unchecked")
                                 HashMap<String, Object> p = (HashMap<String, Object>) request.getPayload();
@@ -347,79 +369,93 @@ public class AuctionServer {
 
                                 Bidder bidder = (Bidder) currentUser;
 
-                                // Lấy phiên từ AuctionManager (in-memory) trước, fallback sang DB
+                                // Lấy phiên (load DB nếu chưa có trong memory)
                                 Auction auction = AuctionManager.getInstance().getAuction(auctionId);
                                 if (auction == null) {
-                                    // Load từ DB nếu chưa có trong memory
                                     auction = auctionDAO.findById(auctionId)
                                             .orElseThrow(() -> new IllegalArgumentException(
                                                     "Không tìm thấy phiên đấu giá: " + auctionId));
-                                    // Load luôn bid history từ DB vào in-memory
                                     List<BidTransaction> existingBids =
                                             bidTransactionDAO.findByAuction(auctionId);
-                                    for (BidTransaction tx : existingBids) {
-                                        auction.injectBid(tx);
-                                    }
+                                    for (BidTransaction tx : existingBids) auction.injectBid(tx);
                                     AuctionManager.getInstance().registerAuction(auction);
                                 }
 
-                                // Kiểm tra giá hợp lệ
-                                if (amount <= auction.getCurrentPrice()) {
-                                    out.writeObject(new Message("PLACE_BID_FAILED",
-                                            String.format("Giá phải cao hơn %,.0f đ!", auction.getCurrentPrice())));
-                                    out.flush();
-                                    break;
+
+                                BidTransaction tx;
+                                Bidder previousLeader;
+                                synchronized (auction) {
+                                    // Kiểm tra lại trạng thái bên trong lock
+                                    if (auction.getStatus() != com.auction.shared.model.AuctionStatus.OPEN
+                                            && auction.getStatus() != com.auction.shared.model.AuctionStatus.RUNNING) {
+                                        bidResult = new Message("PLACE_BID_FAILED", "Phiên đấu giá đã đóng!");
+                                        break;
+                                    }
+
+                                    // Kiểm tra giá hợp lệ (bên trong lock — đảm bảo currentPrice không đổi giữa chừng)
+                                    if (amount <= auction.getCurrentPrice()) {
+                                        bidResult = new Message("PLACE_BID_FAILED",
+                                                String.format("Giá phải cao hơn %,.0f đ!", auction.getCurrentPrice()));
+                                        break;
+                                    }
+
+                                    // Kiểm tra số dư khả dụng
+                                    double oldFrozen   = bidder.getFrozenForAuction(auctionId);
+                                    double extraNeeded = amount - oldFrozen;
+                                    if (bidder.getAvailableBalance() < extraNeeded) {
+                                        bidResult = new Message("PLACE_BID_FAILED",
+                                                String.format("Số dư không đủ! Cần thêm %,.0f đ (khả dụng: %,.0f đ)",
+                                                        extraNeeded, bidder.getAvailableBalance()));
+                                        break;
+                                    }
+
+                                    previousLeader = auction.getLeadingBidder();
+
+                                    // Freeze tiền bidder mới
+                                    bidder.freezeForAuction(auctionId, amount);
+                                    userDAO.updateFrozenBalance(bidder.getId(), bidder.getFrozenBalance());
+
+                                    // Unfreeze bidder bị vượt (nếu khác người)
+                                    if (previousLeader != null
+                                            && !previousLeader.getId().equals(bidder.getId())) {
+                                        previousLeader.unfreezeForAuction(auctionId);
+                                        userDAO.updateFrozenBalance(previousLeader.getId(),
+                                                previousLeader.getFrozenBalance());
+                                        System.out.printf("[Server] Unfreeze outbid: %s%n",
+                                                previousLeader.getUsername());
+                                    }
+
+                                    // Cập nhật in-memory auction
+                                    auction.placeBid(bidder, amount);
+
+                                    // Lưu BidTransaction + cập nhật auction trong DB
+                                    tx = new BidTransaction(bidder, amount, auctionId);
+                                    bidTransactionDAO.save(tx);
+                                    auctionDAO.update(auction);
+
+                                    // ── Anti-sniping: nếu bid trong 60 giây cuối → gia hạn thêm 60 giây
+                                    long secsLeft = java.time.temporal.ChronoUnit.SECONDS.between(
+                                            java.time.LocalDateTime.now(), auction.getEndTime());
+                                    if (secsLeft <= 60) {
+                                        AuctionManager.getInstance().extendAuction(auctionId, 60);
+                                        auctionDAO.updateEndTime(auctionId, auction.getEndTime());
+                                        System.out.printf("[Anti-snipe] Phiên %s gia hạn thêm 60s (còn %ds)%n",
+                                                auctionId, secsLeft);
+                                        // Thông báo gia hạn tới tất cả client
+                                        HashMap<String, Object> extPayload = new HashMap<>();
+                                        extPayload.put("auctionId", auctionId);
+                                        extPayload.put("newEndTime", auction.getEndTime().toString());
+                                        broadcast(new Message("AUCTION_EXTENDED", extPayload), null);
+                                    }
                                 }
+                                // ── END CRITICAL SECTION ──────────────────────
 
-                                // Kiểm tra và cập nhật số dư theo cơ chế freeze:
-                                // - Số tiền cần giữ thêm = amount - oldFrozen (nếu đã bid phiên này)
-                                // - Không trừ thẳng balance, chỉ freeze phần chênh lệch
-                                double oldFrozen = bidder.getFrozenForAuction(auctionId);
-                                double extraNeeded = amount - oldFrozen;
-                                if (bidder.getAvailableBalance() < extraNeeded) {
-                                    out.writeObject(new Message("PLACE_BID_FAILED",
-                                            String.format("Số dư khả dụng không đủ! Cần thêm %,.0f đ (khả dụng: %,.0f đ)",
-                                                    extraNeeded, bidder.getAvailableBalance())));
-                                    out.flush();
-                                    break;
-                                }
+                                bidResult = new Message("PLACE_BID_SUCCESS", tx);
 
-                                // Lưu lại bidder đang dẫn đầu TRƯỚC khi bị vượt
-                                Bidder previousLeader = auction.getLeadingBidder();
+                                // Broadcast NEW_BID tới tất cả client
+                                newBidMsg = new Message("NEW_BID", tx);
 
-                                // Freeze tiền: cập nhật frozenBalance bidder mới
-                                bidder.freezeForAuction(auctionId, amount);
-                                userDAO.updateFrozenBalance(bidder.getId(), bidder.getFrozenBalance());
-
-                                // Unfreeze cho bidder cũ nếu bị outbid bởi người khác
-                                if (previousLeader != null
-                                        && !previousLeader.getId().equals(bidder.getId())) {
-                                    previousLeader.unfreezeForAuction(auctionId);
-                                    userDAO.updateFrozenBalance(previousLeader.getId(),
-                                            previousLeader.getFrozenBalance());
-                                    System.out.printf("[Server] Unfreeze outbid: %s (giải phóng %.0f đ)%n",
-                                            previousLeader.getUsername(),
-                                            previousLeader.getFrozenForAuction(auctionId));
-                                }
-
-                                // Thực hiện đặt giá (cập nhật in-memory auction)
-                                auction.placeBid(bidder, amount);
-
-                                // Tạo BidTransaction và lưu vào DB
-                                BidTransaction tx = new BidTransaction(bidder, amount, auctionId);
-                                bidTransactionDAO.save(tx);
-
-                                // Cập nhật auction trong DB (current_price, status)
-                                auctionDAO.update(auction);
-
-                                // Gửi kết quả về người đặt (kèm bidder đã cập nhật frozen)
-                                out.writeObject(new Message("PLACE_BID_SUCCESS", tx));
-                                out.flush();
-
-                                // Broadcast NEW_BID tới tất cả client khác đang xem
-                                broadcast(new Message("NEW_BID", tx), this);
-
-                                // Nếu có người bị outbid → broadcast để client đó cập nhật số dư
+                                // Broadcast OUTBID_NOTIFY cho người bị vượt
                                 if (previousLeader != null
                                         && !previousLeader.getId().equals(bidder.getId())) {
                                     HashMap<String, Object> outbidPayload = new HashMap<>();
@@ -427,20 +463,22 @@ public class AuctionServer {
                                     outbidPayload.put("bidderId", previousLeader.getId());
                                     outbidPayload.put("newBalance", previousLeader.getBalance());
                                     outbidPayload.put("newFrozen", previousLeader.getFrozenBalance());
-                                    broadcast(new Message("OUTBID_NOTIFY", outbidPayload), null);
+                                    outbidMsg = new Message("OUTBID_NOTIFY", outbidPayload);
                                 }
 
-                                System.out.printf("[Server] PLACE_BID OK: %s đặt %.0f vào %s (frozen: %.0f)%n",
-                                        bidder.getUsername(), amount, auctionId, bidder.getFrozenBalance());
+                                System.out.printf("[Server] PLACE_BID OK: %s đặt %.0f vào %s%n",
+                                        bidder.getUsername(), amount, auctionId);
 
                             } catch (IllegalArgumentException e) {
-                                out.writeObject(new Message("PLACE_BID_FAILED", e.getMessage()));
-                                out.flush();
+                                bidResult = new Message("PLACE_BID_FAILED", e.getMessage());
                             } catch (Exception e) {
-                                out.writeObject(new Message("PLACE_BID_FAILED", "Lỗi server: " + e.getMessage()));
+                                bidResult = new Message("PLACE_BID_FAILED", "Lỗi server: " + e.getMessage());
                                 e.printStackTrace();
-                                out.flush();
                             }
+                            // Gửi kết quả ra ngoài synchronized block để không giữ lock khi I/O
+                            if (bidResult != null) { out.writeObject(bidResult); out.flush(); }
+                            if (newBidMsg  != null) broadcast(newBidMsg, this);
+                            if (outbidMsg  != null) broadcast(outbidMsg, null);
                         }
 
                         // ── NẠP TIỀN ─────────────────────────────────────────
@@ -699,6 +737,262 @@ public class AuctionServer {
                             System.out.println("[Server] " +
                                     (currentUser != null ? currentUser.getUsername() : "?") + " đăng xuất.");
                             currentUser = null;
+                        }
+
+                        // ── ADMIN: LẤY DANH SÁCH NGƯỜI DÙNG ─────────────────
+                        case "GET_ALL_USERS" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("GET_ALL_USERS_SUCCESS", new ArrayList<>()));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                List<User> allUsers = userDAO.findAll();
+                                out.writeObject(new Message("GET_ALL_USERS_SUCCESS",
+                                        (java.io.Serializable) allUsers));
+                                System.out.println("[Server] GET_ALL_USERS OK: " + allUsers.size() + " users");
+                            } catch (Exception e) {
+                                out.writeObject(new Message("GET_ALL_USERS_SUCCESS", new ArrayList<>()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── ADMIN: LẤY DANH SÁCH PHIÊN ──────────────────────
+                        case "GET_ALL_AUCTIONS" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("GET_ALL_AUCTIONS_SUCCESS", new ArrayList<>()));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                List<Auction> allAuctions = auctionDAO.findAll();
+                                // Inject bids từ DB và in-memory
+                                for (Auction auction : allAuctions) {
+                                    Auction inMem = AuctionManager.getInstance()
+                                            .getAuction(auction.getId());
+                                    if (inMem != null && inMem.getBids() != null
+                                            && !inMem.getBids().isEmpty()) {
+                                        for (BidTransaction tx : inMem.getBids()) {
+                                            auction.injectBid(tx);
+                                        }
+                                        auction.setCurrentPriceOnly(inMem.getCurrentPrice());
+                                    } else {
+                                        List<BidTransaction> bids =
+                                                bidTransactionDAO.findByAuction(auction.getId());
+                                        for (BidTransaction tx : bids) {
+                                            auction.injectBid(tx);
+                                        }
+                                    }
+                                }
+                                out.writeObject(new Message("GET_ALL_AUCTIONS_SUCCESS",
+                                        (java.io.Serializable) allAuctions));
+                                System.out.println("[Server] GET_ALL_AUCTIONS OK: " + allAuctions.size() + " phiên");
+                            } catch (Exception e) {
+                                out.writeObject(new Message("GET_ALL_AUCTIONS_SUCCESS", new ArrayList<>()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── ADMIN: KHOÁ/MỞ KHOÁ NGƯỜI DÙNG ──────────────────
+                        case "BAN_USER" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("BAN_USER_SUCCESS", null));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                String userId = (String) request.getPayload();
+                                User user = userDAO.findById(userId).orElse(null);
+                                if (user == null) {
+                                    out.writeObject(new Message("BAN_USER_SUCCESS", null));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Toggle active status
+                                boolean newStatus = !user.isActive();
+                                userDAO.updateActive(userId, newStatus);
+                                user.setActive(newStatus);
+
+                                out.writeObject(new Message("BAN_USER_SUCCESS", userId));
+                                System.out.println("[Server] BAN_USER OK: " + user.getUsername() +
+                                        " | Active: " + newStatus);
+
+                                // Broadcast để admin khác cập nhật UI
+                                broadcast(new Message("BAN_USER_SUCCESS", userId), this);
+                                if (!newStatus) {
+                                    for (ClientHandler c : connectedClients) {
+                                        if (c.getCurrentUser() != null
+                                                && c.getCurrentUser().getId().equals(userId)) {
+                                            try {
+                                                c.sendMessage(new Message("FORCE_LOGOUT", "Tai khoan cua ban da bi khoa boi Admin."));
+                                            } catch (IOException ignored) {}
+                                            break;
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                out.writeObject(new Message("BAN_USER_SUCCESS", null));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── ADMIN: HỦY PHIÊN (CANCELLED) — unfreeze tất cả bidder ─
+                        case "ADMIN_CANCEL_AUCTION" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("ADMIN_CANCEL_AUCTION_FAILED",
+                                        "Không có quyền truy cập!"));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                String auctionId = (String) request.getPayload();
+                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
+                                if (auction == null) {
+                                    auction = auctionDAO.findById(auctionId).orElse(null);
+                                }
+                                if (auction == null) {
+                                    out.writeObject(new Message("ADMIN_CANCEL_AUCTION_FAILED",
+                                            "Không tìm thấy phiên: " + auctionId));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Chỉ hủy phiên OPEN hoặc RUNNING
+                                if (auction.getStatus() != AuctionStatus.OPEN
+                                        && auction.getStatus() != AuctionStatus.RUNNING) {
+                                    out.writeObject(new Message("ADMIN_CANCEL_AUCTION_FAILED",
+                                            "Phiên đã kết thúc hoặc đã hủy!"));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Unfreeze tất cả bidder đã tham gia
+                                java.util.Map<String, Bidder> bidders = new java.util.LinkedHashMap<>();
+                                for (BidTransaction tx : auction.getBids()) {
+                                    bidders.put(tx.getBidder().getId(), tx.getBidder());
+                                }
+                                for (Bidder bidder : bidders.values()) {
+                                    bidder.unfreezeForAuction(auctionId);
+                                    userDAO.updateFrozenBalance(bidder.getId(), bidder.getFrozenBalance());
+                                    System.out.printf("[Admin Cancel] Unfreeze bidder %s%n",
+                                            bidder.getUsername());
+                                }
+
+                                // Đặt trạng thái CANCELLED và lưu DB
+                                auction.setStatus(AuctionStatus.CANCELLED);
+                                auctionDAO.update(auction);
+                                // Huỷ lịch đóng tự động
+                                AuctionManager.getInstance().closeAuction(auctionId);
+
+                                out.writeObject(new Message("ADMIN_CANCEL_AUCTION_SUCCESS", auctionId));
+                                System.out.println("[Server] ADMIN_CANCEL_AUCTION OK: " + auctionId);
+
+                                // Broadcast để tất cả clients cập nhật UI
+                                broadcast(new Message("AUCTION_CLOSED", auction), this);
+                                broadcast(new Message("ADMIN_CANCEL_AUCTION_SUCCESS", auctionId), this);
+
+                                // Gửi thông báo riêng AUCTION_CANCELLED tới Seller
+                                User seller = auction.getSeller();
+                                if (seller != null) {
+                                    for (ClientHandler c : connectedClients) {
+                                        User cu = c.getCurrentUser();
+                                        if (cu != null && cu.getId().equals(seller.getId())) {
+                                            try {
+                                                HashMap<String, Object> np = new HashMap<>();
+                                                np.put("auction", auction);
+                                                np.put("reason", "Phiên đấu giá \""
+                                                        + auction.getItem().getName()
+                                                        + "\" của bạn đã bị Admin hủy.");
+                                                c.sendMessage(new Message("AUCTION_CANCELLED", np));
+                                            } catch (IOException ignored) {}
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // Gửi thông báo riêng AUCTION_CANCELLED tới tất cả Bidder đã tham gia
+                                java.util.Set<String> notifiedBidders = new java.util.HashSet<>();
+                                for (BidTransaction tx : auction.getBids()) {
+                                    String bidderId = tx.getBidder().getId();
+                                    if (notifiedBidders.contains(bidderId)) continue;
+                                    notifiedBidders.add(bidderId);
+                                    for (ClientHandler c : connectedClients) {
+                                        User cu = c.getCurrentUser();
+                                        if (cu != null && cu.getId().equals(bidderId)) {
+                                            try {
+                                                HashMap<String, Object> np = new HashMap<>();
+                                                np.put("auction", auction);
+                                                np.put("reason", "Phiên đấu giá \""
+                                                        + auction.getItem().getName()
+                                                        + "\" đã bị Admin hủy. Tiền của bạn đã được hoàn trả.");
+                                                c.sendMessage(new Message("AUCTION_CANCELLED", np));
+                                            } catch (IOException ignored) {}
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // Refresh danh sách admin
+                                List<Auction> allForAdmin = auctionDAO.findAll();
+                                broadcastToAdmins(new Message("GET_ALL_AUCTIONS_SUCCESS",
+                                        (java.io.Serializable) allForAdmin));
+
+                            } catch (Exception e) {
+                                out.writeObject(new Message("ADMIN_CANCEL_AUCTION_FAILED",
+                                        "Lỗi server: " + e.getMessage()));
+                                e.printStackTrace();
+                            }
+                            out.flush();
+                        }
+
+                        // ── ADMIN: ĐÓNG PHIÊN ĐANG HOẠT ĐỘNG ────────────────
+                        case "ADMIN_CLOSE_AUCTION" -> {
+                            if (currentUser == null || !(currentUser instanceof Admin)) {
+                                out.writeObject(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", null));
+                                out.flush();
+                                break;
+                            }
+                            try {
+                                String auctionId = (String) request.getPayload();
+                                Auction auction = AuctionManager.getInstance().getAuction(auctionId);
+                                if (auction == null) {
+                                    auction = auctionDAO.findById(auctionId).orElse(null);
+                                }
+                                if (auction == null) {
+                                    out.writeObject(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", null));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Chỉ đóng phiên đang OPEN hoặc RUNNING
+                                if (auction.getStatus() != AuctionStatus.OPEN
+                                        && auction.getStatus() != AuctionStatus.RUNNING) {
+                                    out.writeObject(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", null));
+                                    out.flush();
+                                    break;
+                                }
+
+                                // Đặt trạng thái FINISHED và lưu DB
+                                auction.setStatus(AuctionStatus.FINISHED);
+                                auctionDAO.update(auction);
+                                // Huỷ lịch đóng tự động
+                                AuctionManager.getInstance().closeAuction(auctionId);
+
+                                out.writeObject(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", auctionId));
+                                System.out.println("[Server] ADMIN_CLOSE_AUCTION OK: " + auctionId);
+
+                                // Broadcast để tất cả clients biết phiên đã đóng
+                                broadcast(new Message("AUCTION_CLOSED", auction), this);
+                                broadcast(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", auctionId), this);
+                            } catch (Exception e) {
+                                out.writeObject(new Message("ADMIN_CLOSE_AUCTION_SUCCESS", null));
+                                e.printStackTrace();
+                            }
+                            out.flush();
                         }
 
                         default -> System.out.println("[Server] Không xử lý: " + request.getType());

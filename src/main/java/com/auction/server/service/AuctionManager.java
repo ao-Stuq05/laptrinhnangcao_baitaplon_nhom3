@@ -84,8 +84,6 @@ public class AuctionManager {
         System.out.println("[Manager] Phiên " + auctionId + " → FINISHED");
 
         determineWinner(a);
-
-        // Gọi callback để AuctionServer xử lý DB + broadcast + tài chính
         if (onAuctionClosedCallback != null) {
             onAuctionClosedCallback.accept(a);
         }

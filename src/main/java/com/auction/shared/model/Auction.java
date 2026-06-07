@@ -1,7 +1,6 @@
 package com.auction.shared.model;
 
-import com.auction.shared.exception.AuctionClosedException;
-import com.auction.shared.exception.InvalidBidException;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -181,6 +180,7 @@ public class Auction extends Entity implements Serializable {
     public Bidder getLeadingBidder()     { return highestBidder; }
     public Bidder getWinner()            { return winner; }
     public List<BidTransaction> getBids(){ return bidHistory; }
+    public int getBidCount() { return bidHistory != null ? bidHistory.size() : 0; }
 
     // ── Setters — AuctionManager cần ─────────────────────────
 

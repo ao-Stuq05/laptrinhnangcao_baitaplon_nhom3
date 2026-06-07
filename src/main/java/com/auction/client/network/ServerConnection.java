@@ -27,6 +27,18 @@ public class ServerConnection {
     private Consumer<Auction>              auctionClosedCallback;
     /** Callback khi bị người khác vượt giá — nhận auctionId để ProductController refresh balance */
     private Consumer<String>               outbidCallback;
+    /** Callback khi phiên bị gia hạn do anti-sniping — nhận (auctionId, newEndTime) */
+    private java.util.function.BiConsumer<String, String> auctionExtendedCallback;
+
+    // ── Admin Callbacks ────────────────────────────────────────────────────────
+    private Consumer<List<User>>           adminUserCallback;
+    private Consumer<List<Auction>>        adminAuctionCallback;
+    private Consumer<String>               adminBanCallback;
+    private Consumer<String>               adminCloseAuctionCallback;
+    /** Callback real-time cho Admin khi có bid mới: nhận BidTransaction để cập nhật bảng live */
+    private Consumer<BidTransaction>       adminBidUpdateCallback;
+    /** Callback cho Admin khi hủy phiên thành công: nhận auctionId */
+    private Consumer<String>               adminCancelAuctionCallback;
 
     private ServerConnection() {}
     public static ServerConnection getInstance() {
@@ -42,8 +54,15 @@ public class ServerConnection {
     public void setMyAuctionCallback     (Consumer<List<Auction>> cb)         { myAuctionCallback      = cb; }
     public void setMyBidCallback         (Consumer<List<BidTransaction>> cb)  { myBidCallback          = cb; }
     public void setProfileUpdateCallback (Consumer<User> cb)                  { profileUpdateCallback  = cb; }
-    public void setAuctionClosedCallback (Consumer<Auction> cb)               { auctionClosedCallback  = cb; }
-    public void setOutbidCallback        (Consumer<String> cb)                { outbidCallback         = cb; }
+    public void setAuctionClosedCallback (Consumer<Auction> cb)               { auctionClosedCallback   = cb; }
+    public void setOutbidCallback        (Consumer<String> cb)                { outbidCallback          = cb; }
+    public void setAuctionExtendedCallback(java.util.function.BiConsumer<String, String> cb) { auctionExtendedCallback = cb; }
+    public void setAdminUserCallback     (Consumer<List<User>> cb)            { adminUserCallback      = cb; }
+    public void setAdminAuctionCallback  (Consumer<List<Auction>> cb)         { adminAuctionCallback   = cb; }
+    public void setAdminBanCallback             (Consumer<String> cb) { adminBanCallback            = cb; }
+    public void setAdminCloseAuctionCallback    (Consumer<String> cb) { adminCloseAuctionCallback   = cb; }
+    public void setAdminBidUpdateCallback       (Consumer<BidTransaction> cb) { adminBidUpdateCallback = cb; }
+    public void setAdminCancelAuctionCallback   (Consumer<String> cb) { adminCancelAuctionCallback  = cb; }
 
     public void connect(String host, int port) throws IOException {
         if (socket == null || socket.isClosed()) {
@@ -77,7 +96,9 @@ public class ServerConnection {
 
             case "LOGIN_SUCCESS" -> {
                 currentUser = (User) msg.getPayload();
-                Platform.runLater(() -> SceneManager.switchScene("UI.fxml"));
+                // Điều hướng dựa trên vai trò của user
+                String scene = (currentUser instanceof com.auction.shared.model.Admin) ? "Admin.fxml" : "UI.fxml";
+                Platform.runLater(() -> SceneManager.switchScene(scene));
             }
             case "LOGIN_FAILED" ->
                     Platform.runLater(() -> alert("Đăng nhập thất bại",
@@ -100,9 +121,10 @@ public class ServerConnection {
                 Auction a = (Auction) msg.getPayload();
                 Platform.runLater(() -> {
                     alert("Đăng bán thành công",
-                            "\"" + a.getItem().getName() + "\" đã được đăng!",
+                            "\"" + a.getItem().getName() + "\" đã được đăng và đang mở đấu giá!",
                             javafx.scene.control.Alert.AlertType.INFORMATION);
-                    SceneManager.switchScene("UI.fxml");
+                    // [FIX] Chuyển sang MyAuctions để seller thấy ngay sản phẩm vừa đăng
+                    SceneManager.switchScene("MyAuctions.fxml");
                 });
             }
             case "CREATE_AUCTION_FAILED" ->
@@ -133,7 +155,9 @@ public class ServerConnection {
 
             case "GET_AUCTIONS_SUCCESS" -> {
                 @SuppressWarnings("unchecked") List<Auction> list = (List<Auction>) msg.getPayload();
-                if (auctionListCallback != null) auctionListCallback.accept(list);
+                // [FIX] Phai chay tren JavaFX Application Thread moi update duoc UI
+                if (auctionListCallback != null)
+                    Platform.runLater(() -> auctionListCallback.accept(list));
             }
 
             // ── Bid realtime ─────────────────────────────────────────────────
@@ -146,6 +170,9 @@ public class ServerConnection {
                     bidder.freezeForAuction(tx.getAuctionId(), tx.getBidAmount());
                 }
                 if (bidUpdateCallback != null) bidUpdateCallback.accept(tx);
+                // Cập nhật real-time bảng live cho Admin
+                if (adminBidUpdateCallback != null)
+                    Platform.runLater(() -> adminBidUpdateCallback.accept(tx));
             }
             case "PLACE_BID_FAILED" ->
                     Platform.runLater(() -> alert("Đặt giá thất bại",
@@ -168,7 +195,6 @@ public class ServerConnection {
                     bidder.unfreezeForAuction(auctionId);
                     if (bidUpdateCallback != null) {
                         // Tái dùng callback để ProductController cập nhật UI số dư
-                        // (tx=null được xử lý an toàn — chỉ cần trigger refresh balance)
                     }
                     Platform.runLater(() -> {
                         if (outbidCallback != null) outbidCallback.accept(auctionId);
@@ -206,14 +232,23 @@ public class ServerConnection {
                     Platform.runLater(() -> alert("Cập nhật thất bại",
                             (String) msg.getPayload(), javafx.scene.control.Alert.AlertType.ERROR));
 
-            // ── Phiên kết thúc (từ AuctionManager broadcast) ─────────────────
+            // ── Phiên kết thúc hoặc biến động thời gian do Anti-sniping ─────
+            case "AUCTION_EXTENDED" -> {
+                @SuppressWarnings("unchecked")
+                java.util.HashMap<String, Object> ep =
+                        (java.util.HashMap<String, Object>) msg.getPayload();
+                String extAuctionId = (String) ep.get("auctionId");
+                String newEndTimeStr = (String) ep.get("newEndTime");
+                // Thông báo cho ProductController cập nhật lại bộ đếm giờ countdown
+                if (auctionExtendedCallback != null) {
+                    Platform.runLater(() -> auctionExtendedCallback.accept(extAuctionId, newEndTimeStr));
+                }
+            }
+
             case "AUCTION_CLOSED" -> {
                 Auction closed = (Auction) msg.getPayload();
 
-                // Cập nhật lại balance / frozen cho bidder hiện tại
                 if (currentUser instanceof Bidder bidder) {
-                    // Server đã xử lý: nếu thắng → balance giảm, nếu thua → không đổi
-                    // Client: giải phóng frozen cho phiên này
                     bidder.unfreezeForAuction(closed.getId());
                     if (closed.getWinner() != null
                             && closed.getWinner().getId().equals(bidder.getId())) {
@@ -235,12 +270,11 @@ public class ServerConnection {
                             "Bạn đã thắng phiên đấu giá: " + a.getItem().getName() +
                                     " với mức giá " + String.format("%.0f đ", a.getCurrentPrice()),
                             javafx.scene.control.Alert.AlertType.INFORMATION);
-                    // Callback để cập nhật UI nếu cần
                     if (auctionClosedCallback != null) auctionClosedCallback.accept(a);
                 });
             }
 
-            // ── Thông báo dành riêng: seller được thông báo sản phẩm đã bán
+            // ── Thông báo dành riêng: seller được thông báo sản phẩm đã bán ──
             case "AUCTION_SOLD" -> {
                 Auction a = (Auction) msg.getPayload();
                 Platform.runLater(() -> {
@@ -251,12 +285,75 @@ public class ServerConnection {
                     // Nếu seller đang xem trang quản lý, refresh danh sách
                     if (myAuctionCallback != null) {
                         try {
-                            // Yêu cầu server lấy lại danh sách my auctions
-                            // Client có thể gọi API GET_MY_AUCTIONS khi cần; gửi request
                             sendMessage(new Message("GET_MY_AUCTIONS", null));
                         } catch (Exception ignored) {}
                     }
                 });
+            }
+
+            // ── Thông báo Admin hủy phiên — gửi riêng tới seller + bidder ──
+            case "AUCTION_CANCELLED" -> {
+                @SuppressWarnings("unchecked")
+                java.util.HashMap<String, Object> np =
+                        (java.util.HashMap<String, Object>) msg.getPayload();
+                Auction a = (Auction) np.get("auction");
+                String reason = (String) np.get("reason");
+                Platform.runLater(() -> {
+                    String content = (reason != null && !reason.isBlank())
+                            ? reason
+                            : "Phiên đấu giá \"" + a.getItem().getName() + "\" đã bị Admin hủy.";
+                    alert("⚠️ Phiên đấu giá bị hủy", content,
+                            javafx.scene.control.Alert.AlertType.WARNING);
+                    if (auctionListCallback != null) {
+                        try { sendMessage(new Message("GET_AUCTIONS", null)); }
+                        catch (Exception ignored) {}
+                    }
+                    if (myAuctionCallback != null) {
+                        try { sendMessage(new Message("GET_MY_AUCTIONS", null)); }
+                        catch (Exception ignored) {}
+                    }
+                    if (auctionClosedCallback != null) auctionClosedCallback.accept(a);
+                });
+            }
+
+            // ── Admin messages ──────────────────────────────────────────────────
+            case "GET_ALL_USERS_SUCCESS" -> {
+                @SuppressWarnings("unchecked") List<User> list = (List<User>) msg.getPayload();
+                if (adminUserCallback != null) Platform.runLater(() -> adminUserCallback.accept(list));
+            }
+            case "GET_ALL_AUCTIONS_SUCCESS" -> {
+                @SuppressWarnings("unchecked") List<Auction> list = (List<Auction>) msg.getPayload();
+                if (adminAuctionCallback != null) Platform.runLater(() -> adminAuctionCallback.accept(list));
+            }
+
+            case "BAN_USER_SUCCESS" -> {
+                String userId = (String) msg.getPayload();
+                if (userId != null && adminBanCallback != null)
+                    Platform.runLater(() -> adminBanCallback.accept(userId));
+            }
+            case "FORCE_LOGOUT" -> {
+                String reason = (String) msg.getPayload();
+                Platform.runLater(() -> {
+                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+                            javafx.scene.control.Alert.AlertType.WARNING);
+                    alert.setHeaderText("Tai khoan bi khoa");
+                    alert.setContentText(reason != null ? reason : "Tai khoan cua ban da bi khoa.");
+                    alert.showAndWait();
+                    resetAndReconnect("localhost", 1234);
+                    com.auction.client.SceneManager.switchScene("login.fxml");
+                });
+            }
+
+            case "ADMIN_CLOSE_AUCTION_SUCCESS" -> {
+                String auctionId = (String) msg.getPayload();
+                if (auctionId != null && adminCloseAuctionCallback != null)
+                    Platform.runLater(() -> adminCloseAuctionCallback.accept(auctionId));
+            }
+
+            case "ADMIN_CANCEL_AUCTION_SUCCESS" -> {
+                String auctionId = (String) msg.getPayload();
+                if (auctionId != null && adminCancelAuctionCallback != null)
+                    Platform.runLater(() -> adminCancelAuctionCallback.accept(auctionId));
             }
 
             default -> System.out.println("[Client] Không xử lý: " + msg.getType());
@@ -270,6 +367,37 @@ public class ServerConnection {
     public void close() throws IOException {
         isRunning = false;
         if (socket != null) socket.close();
+    }
+
+    /**
+     * Goi khi logout: dong socket cu, xoa toan bo state va callbacks,
+     * sau do reconnect de san sang cho lan dang nhap tiep theo.
+     */
+    public void resetAndReconnect(String host, int port) {
+        try {
+            isRunning = false;
+            if (socket != null && !socket.isClosed()) socket.close();
+        } catch (Exception ignored) {}
+        // Xoa toan bo state
+        socket = null; out = null; in = null;
+        currentUser = null;
+        // Xoa tat ca callbacks
+        auctionListCallback = null;
+        bidUpdateCallback = null;
+        topUpCallback = null;
+        myAuctionCallback = null;
+        myBidCallback = null;
+        profileUpdateCallback = null;
+        auctionClosedCallback = null;
+        outbidCallback = null;
+        auctionExtendedCallback = null;
+        adminUserCallback = null;
+        adminAuctionCallback = null;
+        adminBanCallback = null;
+        adminCloseAuctionCallback = null;
+        // Reconnect cho lan dang nhap tiep
+        try { connect(host, port); }
+        catch (Exception e) { System.err.println("[ServerConnection] Reconnect that bai: " + e.getMessage()); }
     }
 
     private void alert(String header, String content,

@@ -10,19 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.io.Serializable;
 
-/**
- * Bidder — người đấu giá.
- *
- * Logic tài chính:
- *  - balance      : số dư thực tế (có thể dùng)
- *  - frozenBalance: tổng tiền đang bị giữ (đặt cọc cho các phiên đang tham gia)
- *  - availableBalance = balance - frozenBalance
- *
- * Khi đặt giá:  frozenBalance += amount  (giữ tiền)
- * Khi bị outbid: frozenBalance -= oldBid (hoàn tiền đặt cọc cũ)
- * Khi thắng phiên: balance -= winAmount, frozenBalance -= winAmount (trừ thật)
- * Khi thua phiên:  frozenBalance -= bidAmount (giải phóng, không trừ balance)
- */
+
 public class Bidder extends User implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -83,7 +71,7 @@ public class Bidder extends User implements Serializable {
         double oldFrozen = frozenPerAuction.getOrDefault(auctionId, 0.0);
         double delta     = newAmount - oldFrozen; // tiền cần giữ thêm
 
-        if (getAvailableBalance() < delta) return false; // không đủ
+        if (getAvailableBalance() < delta) return false; 
 
         frozenBalance += delta;
         frozenPerAuction.put(auctionId, newAmount);

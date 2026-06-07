@@ -7,7 +7,7 @@ public class Admin extends User implements Serializable{
 
     private static final long serialVersionUID = 1L;
 
-    private String adminLevel; // "SUPER" | "NORMAL"
+    private String adminLevel; 
 
     public Admin(String username, String email, String passwordHash) {
         super(UUID.randomUUID().toString(), username, email, passwordHash);

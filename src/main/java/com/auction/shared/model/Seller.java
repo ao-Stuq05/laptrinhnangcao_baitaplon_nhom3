@@ -1,11 +1,9 @@
 package com.auction.shared.model;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import com.auction.server.service.AuctionManager;
-
 import java.io.Serializable;
 
 public class Seller extends User implements Serializable {
@@ -37,10 +35,7 @@ public class Seller extends User implements Serializable {
     
     public Auction createAuction(Item item, LocalDateTime endTime) {
         listItem(item);
-        Auction auction = new Auction(item, endTime);
-        // Đảm bảo AuctionManager đã được định nghĩa đúng theo Pattern Singleton
-        AuctionManager.getInstance().registerAuction(auction);
-        return auction;
+        return new Auction(item, endTime);
     }
 
     public List<Item> getListedItems() { 

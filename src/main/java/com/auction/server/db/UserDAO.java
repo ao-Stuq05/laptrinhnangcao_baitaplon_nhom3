@@ -13,10 +13,13 @@ import java.util.Optional;
 
 public class UserDAO {
 
-    private final Connection conn;
+    
 
     public UserDAO() {
-        this.conn = DatabaseManager.getInstance().getConnection();
+    }
+
+    private Connection getConn() {
+        return DatabaseManager.getInstance().getConnection();
     }
 
     // ── CREATE ────────────────────────────────────────────────
@@ -28,7 +31,7 @@ public class UserDAO {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, user.getId());
             ps.setString(2, user.getUsername());
             ps.setString(3, user.getEmail());
@@ -60,7 +63,7 @@ public class UserDAO {
 
     public Optional<User> findByUsername(String username) throws SQLException {
         String sql = "SELECT * FROM users WHERE username = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) return Optional.of(mapRowToUser(rs));
@@ -70,7 +73,7 @@ public class UserDAO {
 
     public Optional<User> findById(String id) throws SQLException {
         String sql = "SELECT * FROM users WHERE id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) return Optional.of(mapRowToUser(rs));
@@ -81,8 +84,7 @@ public class UserDAO {
     public List<User> findAll() throws SQLException {
         String sql = "SELECT * FROM users ORDER BY created_at DESC";
         List<User> result = new ArrayList<>();
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs   = stmt.executeQuery(sql)) {
+        try (Connection conn = getConn(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) result.add(mapRowToUser(rs));
         }
         return result;
@@ -90,7 +92,7 @@ public class UserDAO {
 
     public boolean existsByUsername(String username) throws SQLException {
         String sql = "SELECT COUNT(*) FROM users WHERE username = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
             ResultSet rs = ps.executeQuery();
             return rs.next() && rs.getInt(1) > 0;
@@ -101,7 +103,7 @@ public class UserDAO {
 
     public void updateActive(String userId, boolean isActive) throws SQLException {
         String sql = "UPDATE users SET is_active = ?, updated_at = ? WHERE id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt   (1, isActive ? 1 : 0);
             ps.setTimestamp(2, Timestamp.valueOf(java.time.LocalDateTime.now()));
             ps.setString(3, userId);
@@ -111,7 +113,7 @@ public class UserDAO {
 
     public void updateBalance(String bidderId, double newBalance) throws SQLException {
         String sql = "UPDATE users SET balance = ?, updated_at = ? WHERE id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setDouble(1, newBalance);
             ps.setTimestamp(2, Timestamp.valueOf(java.time.LocalDateTime.now()));
             ps.setString(3, bidderId);
@@ -122,18 +124,16 @@ public class UserDAO {
     /** Cập nhật frozen_balance cho bidder */
     public void updateFrozenBalance(String bidderId, double newFrozen) throws SQLException {
         String sql = "UPDATE users SET frozen_balance = ?, updated_at = ? WHERE id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setDouble(1, newFrozen);
             ps.setTimestamp(2, Timestamp.valueOf(java.time.LocalDateTime.now()));
             ps.setString(3, bidderId);
             ps.executeUpdate();
         }
     }
-
-    /** Cập nhật cả balance và frozen_balance cùng lúc (dùng khi kết thúc phiên) */
     public void updateBalanceAndFrozen(String bidderId, double newBalance, double newFrozen) throws SQLException {
         String sql = "UPDATE users SET balance = ?, frozen_balance = ?, updated_at = ? WHERE id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setDouble(1, newBalance);
             ps.setDouble(2, newFrozen);
             ps.setTimestamp(3, Timestamp.valueOf(java.time.LocalDateTime.now()));
@@ -141,12 +141,10 @@ public class UserDAO {
             ps.executeUpdate();
         }
     }
-
-    /** MỚI: Cập nhật email và password của user từ màn hình Hồ sơ */
     public void updateProfile(String userId, String newEmail, String newPassword) throws SQLException {
         if (newPassword != null && !newPassword.isEmpty()) {
             String sql = "UPDATE users SET email = ?, password_hash = ?, updated_at = ? WHERE id = ?";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, newEmail);
                 ps.setString(2, newPassword); // production: hash bằng BCrypt trước
                 ps.setTimestamp(3, Timestamp.valueOf(java.time.LocalDateTime.now()));
@@ -155,7 +153,7 @@ public class UserDAO {
             }
         } else {
             String sql = "UPDATE users SET email = ?, updated_at = ? WHERE id = ?";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, newEmail);
                 ps.setTimestamp(2, Timestamp.valueOf(java.time.LocalDateTime.now()));
                 ps.setString(3, userId);

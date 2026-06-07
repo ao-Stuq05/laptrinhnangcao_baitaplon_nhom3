@@ -1,11 +1,6 @@
 package com.auction.shared.model;
 
-// FIX: import từng class riêng — không dùng Item.Electronics (sai cú pháp)
-import com.auction.shared.model.Auction;
-import com.auction.shared.model.AuctionStatus;
-import com.auction.shared.model.Bidder;
-import com.auction.shared.model.Electronics;
-import com.auction.shared.model.Seller;
+
 
 import java.time.LocalDateTime;
 import java.util.concurrent.CountDownLatch;
