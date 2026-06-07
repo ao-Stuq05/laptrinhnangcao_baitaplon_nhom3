@@ -364,7 +364,7 @@ File `.github/workflows/ci.yml` tự động chạy trên mỗi push/PR vào `ma
 |Loại|Link|
 |-|-|
 |📄 Báo cáo PDF|[Xem trên Google Drive](LINK_BAO_CAO_PDF)|
-|🎬 Video Demo|[Xem trên Google Drive](LINK_VIDEO_DEMO)|
+|🎬 Video Demo|[Xem trên Google Drive]((https://drive.google.com/file/d/1iaxYUkl_zlDD85rBpR1anBbav9LT_QC5/view?usp=drive_link))|
 
 > \*\*Nội dung video demo (≤ 4 phút):\*\*
 > - Cách khởi động Server và nhiều Client
